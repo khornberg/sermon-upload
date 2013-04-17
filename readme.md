@@ -3,7 +3,7 @@
 - Tags: mp3, podcasting, id3, podcast, podcaster, audio, music, spokenword
 - Requires at least: 3.0
 - Tested up to: 3.4.1
-- Stable tag: 1.0
+- Stable tag: 1.0.2
 - License: GPLv3
 
 Creates posts using MP3 ID3 information.
@@ -20,7 +20,16 @@ Does everything that the original [MP3-to-post](http://www.fractured-state.com/2
 3. Upload mp3 files to /wp-content/uploads/mp3-to-post
 4. Go to the plugin page(under the Settings tab) and start creating posts. 
 
+### To Do
+* Update to getID3 1.9.5
+
 ### Changelog 
+
+#### 1.1
+* Added ability to edit tags in the browser
+
+#### 1.0.3
+* Restructured code
 
 #### 1.0.2
 * Add ability to upload file from admin page.
@@ -48,4 +57,3 @@ TODO
 
 #### 1.0
 * Initial commit
-

@@ -1,0 +1,8 @@
+.sermon_list_item {
+cursor:pointer
+}
+
+.sermon_list_item ul {
+display:none;
+padding:4px
+}
