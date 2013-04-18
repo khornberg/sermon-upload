@@ -520,17 +520,22 @@ class SermonUpload
          */
         getid3_lib::CopyTagsToComments( $ThisFileInfo );
 
-        $tags = array('title' => $ThisFileInfo['filename'], 'comment' => '', 'genre' => '', 'artist' => '', 'album' => '', 'year' => '');
+        $tags = array('title' => sanitize_text_field( $ThisFileInfo['filename'] ), 'genre' => '', 'artist' => '', 'album' => '', 'year' => '');
 
         foreach ($tags as $key => $tag) {
             if( array_key_exists($key, $ThisFileInfo['tags']['id3v2']) ) {
-                $value = sanitize_text_field($ThisFileInfo['tags']['id3v2'][$key][0]);
+                $value = sanitize_text_field( $ThisFileInfo['tags']['id3v2'][$key][0] );
                 $tags[$key] = $value;
             }
         }
 
-        $tags['bitrate'] = $ThisFileInfo['bitrate'];
-        $tags['length'] = $ThisFileInfo['playtime_string'];
+        if( array_key_exists($key, $ThisFileInfo['comments_html']) ) {
+            $value = sanitize_text_field( $ThisFileInfo['comments_html']['comment'][0] );
+            $tags['comment'] = $value;
+        }
+
+        $tags['bitrate'] = sanitize_text_field( $ThisFileInfo['bitrate'] );
+        $tags['length'] = sanitize_text_field( $ThisFileInfo['playtime_string'] );
 
         return $tags;
     }
