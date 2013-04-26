@@ -39,10 +39,24 @@
 		/*
 			Show details of sermon
 		*/
-		jQuery(".sermon_list_item").click(function () {
-          jQuery(this).children('ul').toggle('slow');
-      });
+      	jQuery("button").click(function () {
+            var dl_id = "dl-" + this.id;
+            jQuery("#" + dl_id).toggle('slow');
+      	});
+
+      	jQuery(".modal-footer .btn-primary").click(function (error) {
+      		error.preventDefault();
+      		jQuery('.form-horizontal').submit();
+      	});
 	});
 }(jQuery));
 
+
+function show_modal() {
+	var modal = "";
+
+
+
+	return modal;
+}
 //sdg

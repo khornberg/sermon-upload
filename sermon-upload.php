@@ -5,7 +5,7 @@
  * Description: Uploads sermons for Woodland Presbyterian Church. Based off of MP3 to Post plugin by Paul  * Sheldrake. Creates posts using ID3 information in MP3 files.
  * Version: 1.0.2
  * Author: Kyle Hornberg
- * Author URI:
+ * Author URI: https://github.com/khornberg
  * Author Email:
  * License:
  *
@@ -28,6 +28,39 @@
 
 class SermonUpload
 {
+
+    /**
+     * Location of folder containing mp3s, sermons, or files
+     * Default is mp3-to-post
+     */
+    protected $mp3FolderName = 'mp3-to-post';
+
+    protected $uploadsDetails = array();
+    
+    /**
+     * Path to the folder containing mp3s, sermons, or files
+     *
+     */
+    protected $folderPath = "";
+
+    /**
+     * Base URL path
+     *
+     */
+    protected $base_path = "";
+
+    /**
+     * Messages to be displayed
+     * @var array
+     *
+     * Two dimensions
+     * [numeric index]
+     * |--[message @string]
+     * |--[error @booleans]
+     *
+     */
+    protected $messages = array();
+
     /*--------------------------------------------*
      * Constructor
      *--------------------------------------------*/
@@ -45,8 +78,8 @@ class SermonUpload
         add_action( 'admin_enqueue_scripts', array( $this, 'register_admin_scripts' ) );
 
         // Register site styles and scripts
-        add_action( 'wp_enqueue_scripts', array( $this, 'register_plugin_styles' ) );
-        add_action( 'wp_enqueue_scripts', array( $this, 'register_plugin_scripts' ) );
+        // add_action( 'wp_enqueue_scripts', array( $this, 'register_plugin_styles' ) );
+        // add_action( 'wp_enqueue_scripts', array( $this, 'register_plugin_scripts' ) );
 
         // Register hooks that are fired when the plugin is activated, deactivated, and uninstalled, respectively.
         // register_activation_hook( __FILE__, array( $this, 'activate' ) );
@@ -76,14 +109,16 @@ class SermonUpload
         // Adds help menu to plugin
         add_action( 'current_screen', array( $this, 'action_add_help_menu' ) );
 
+        // filter posts
         add_filter( 'posts_where', array( $this, 'filter_title_like_posts_where') , 10, 2 );
 
+        // create folder if it doesn't already exist
         self::create_folder();
 
         // Add Sermon Upload to the posts page
         add_action( 'admin_menu', array( $this, 'action_add_menu_page' ) );
 
-        // TODO Display messages NOT Running at a time when messages are there
+        // TODO Display messages NOT running at a time when messages are there
         //add_action( 'admin_notices', array( $this, 'display_admin_notices') );
 
     } // end constructor
@@ -136,7 +171,8 @@ class SermonUpload
      */
     public function register_admin_styles()
     {
-        // TODO: Change 'plugin-name' to the name of your plugin
+        wp_enqueue_style( 'bootstrap', plugins_url( 'sermon-upload/css/bootstrap.min.css' ) );
+        wp_enqueue_style( 'bootstrap-datepicker', plugins_url( 'sermon-upload/css/datepicker.css' ) );
         wp_enqueue_style( 'sermon-upload-admin-styles', plugins_url( 'sermon-upload/css/admin.css' ) );
         wp_enqueue_style( 'thickbox' );
 
@@ -147,9 +183,9 @@ class SermonUpload
      */
     public function register_admin_scripts()
     {
-        // TODO: Change 'plugin-name' to the name of your plugin
+        wp_enqueue_script( 'bootstrap', plugins_url( 'sermon-upload/js/bootstrap.min.js' ) );
+        wp_enqueue_script( 'bootstrap-datepicker', plugins_url( 'sermon-upload/js/bootstrap-datepicker.js' ) );
         wp_enqueue_script( 'sermon-upload-admin-script', plugins_url( 'sermon-upload/js/admin.js' ) );
-        // TODO: This may work without ahving to load jquery wp_enqueue_script( 'jquery' );
         wp_enqueue_script( 'media-upload' );
         wp_enqueue_script( 'thickbox' );
 
@@ -176,17 +212,9 @@ class SermonUpload
     } // end register_plugin_scripts
 
     /*--------------------------------------------*
-     * Variables
+     * Set/Get Variables
      *---------------------------------------------*/
 
-    /**
-     * Location of folder containing mp3s, sermons, or files
-     * Default is mp3-to-post
-     */
-    protected $mp3FolderName = 'mp3-to-post';
-
-
-    protected $uploadsDetails = array();
     /**
      * Word Press method returns an array of directions to the upload directory
      *
@@ -197,12 +225,6 @@ class SermonUpload
 
         $this->uploadsDetails = $uploadsDetails;
     }
-
-    /**
-     * Path to the folder containing mp3s, sermons, or files
-     *
-     */
-    protected $folderPath = "";
 
     /**
      * Sets the folder where the mp3 sem_get(key)files are located at
@@ -216,14 +238,8 @@ class SermonUpload
     }
 
     /**
-     * Base URL path
-     *
-     */
-    protected $base_path = "";
-
-    /**
      * Sets the base path
-     * 
+     *
      *
      */
     public function set_base_path()
@@ -232,33 +248,17 @@ class SermonUpload
     }
 
     /**
-     * Messages to be displayed
-     * @var array
-     * 
-     * Two dimensions
-     * [numeric index]
-     * |--[message @string]
-     * |--[error @booleans]
-     * 
-     */
-    protected $messages = array();
-
-    /**
      * Sets the messages array
-     * 
+     *
      * @param message as string
-     * @param error as boolean
-     * Error default is 'false' for a warning message (yellow)
-     * Error value of 'true' results in an error message (red)
+     * @param type as string
+     * Type default is '' for a warning message (yellow)
+     * Type value of 'error' results in an error message (red)
+     * Type value of 'success' results in an success message (green)
      */
-    public function set_message( $message, $error = false )
+    public function set_message( $message, $type = '' )
     {
-        $this->messages[] = array( "message" => $message, "error" => $error);
-    }
-
-    public function clear_messages()
-    {
-        $this->messages = array();
+        $this->messages[] = array( "message" => $message, "type" => $type);
     }
 
     /*--------------------------------------------*
@@ -275,7 +275,7 @@ class SermonUpload
         // check if directory exists and makes it if it isn't
         if ( !is_dir( $this->folderPath ) ) {
             if ( !mkdir( $this->folderPath, 0777 ) ) {
-                $this->set_message('Could not make the folder for you to put your files in, please check your permissions. <br />Attempted to create folder at ' . $this->folderPath, true);
+                $this->set_message('Could not make the folder for you to put your files in, please check your permissions. <br />Attempted to create folder at ' . $this->folderPath, 'error');
             }
         }
     }
@@ -328,33 +328,39 @@ class SermonUpload
      *  The base path to the folder containing the audio files to convert to posts
      *
      */
-    public function audio_to_post( $folderPath )
+    public function audio_to_post()
     {
         // get an array of mp3 files
         $mp3Files = $this->mp3_array( $this->folderPath );
 
         // check of there are files to process
         if ( count( $mp3Files ) == 0 ) {
-            $this->set_message( 'There are no files to process' );
+            $this->set_message( 'There are no usable files in ' . $this->folderPath . '.' );
             return;
         }
 
-        // get file name of the sermon to post
-        // remove the last _ of the key value so that it can be searched for
-        $sermon_file_name = key( $_POST );
-        $sermon_file_name = str_replace( '_', '.', $sermon_file_name );
+
+        $post_all = key( $_POST );
+        $sermon_file_name = $_POST['filename'];
+        // $last_ = strrpos($sermon_file_name_post, '_');
+        // // $sermon_file_name = str_replace( '_', '.', $sermon_file_name_post );
+        // $sermon_file_name = $sermon_file_name_post;
+        // if($last_ !== false) {
+        //     $sermon_file_name[$last_] = '.';
+        // }
 
         // loop through all the files and create posts
-        if ($sermon_file_name == 'create-all-posts') {
+        if ($post_all == 'create-all-posts') {
             $limit = count( $mp3Files );
             $sermon_to_post = 0;
         } else {
             $sermon_to_post = array_search( $sermon_file_name, $mp3Files, true );
+
             if ($sermon_to_post === false) {
-                $this->set_message( 'Sermon could not be found in the folder of your uploads. Please check and ensure it is there.' );
+                $this->set_message( 'Sermon could not be found in the folder of your uploads. Please check and ensure it is there.', 'error' );
                 return;
             } elseif ( !is_numeric( $sermon_to_post ) ) {
-                $this->set_message( "Key in mp3 files array is not numeric for $mp3Files[$sermon_to_post]." );
+                $this->set_message( 'Key in mp3 files array is not numeric for ' . $mp3Files[$sermon_to_post] . '."', 'error' );
                 return;
             }
             $limit = $sermon_to_post + 1;
@@ -370,7 +376,7 @@ class SermonUpload
 
             $date = $this->dates($mp3Files[$i]);
 
-            // check if we have a title and a comment
+            // check if we have a title
             if ($audio['title']) {
 
                 // check if post exists by search for one with the same title
@@ -383,10 +389,10 @@ class SermonUpload
                 if ($titleSearchResult->post_count == 0) {
                     // create basic post with info from ID3 details
                     $my_post = array(
-                        'post_title' => $audio['title'],
+                        'post_title'  => $audio['title'],
                         'post_author' => 1,
-                        'post_name' => $audio['title'],
-                        'post_date' => $date['file_date'],
+                        'post_name'   => $audio['title'],
+                        'post_date'   => $date['file_date'],
                         'post_status' => 'publish'
                     );
                     // Insert the post!!
@@ -419,9 +425,9 @@ class SermonUpload
                     $wp_filetype = wp_check_filetype( basename( $wpFileInfo['file'] ), null );
                     $attachment = array(
                         'post_mime_type' => $wp_filetype['type'],
-                        'post_title' => preg_replace( '/\.[^.]+$/', '', basename( $wpFileInfo['file'] ) ),
-                        'post_content' => '', //TODO Add ID3 info???
-                        'post_status' => 'inherit'
+                        'post_title'     => preg_replace( '/\.[^.]+$/', '', basename( $wpFileInfo['file'] ) ),
+                        'post_content'   => '', //TODO Add ID3 info???
+                        'post_status'    => 'inherit'
                     );
                     $attach_id = wp_insert_attachment( $attachment, $wpFileInfo['file'], $postID );
 
@@ -436,60 +442,189 @@ class SermonUpload
 
                     // content of the post to be published
                     $content = '[audio] <br />
-                    <p>Text: ' . $audio['comment'] . '</p>
-                    <p>Speaker: ' . $audio['artist'] . '</p>
+                    <p>Text: ' . (empty($audio['comment'])) ? '' : $audio['comment'] . '</p>
+                    <p>Speaker: ' . (empty($audio['artist'])) ? '' : $audio['artist'] . '</p>
                     <p>Date: ' . $date['display_date'] . '</p><br />' .
                     do_shortcode( '[download label="Download"]' . $wpFileInfo['file'] . '[/download]' );
 
-                    $updatePost = get_post( $postID );
-                    $updated_post = array();
-                    $updated_post['ID'] = $postID;
+                    $updatePost                   = get_post( $postID );
+                    $updated_post                 = array();
+                    $updated_post['ID']           = $postID;
                     $updated_post['post_content'] = $updatePost->post_content . $content;
                     wp_update_post( $updated_post );
 
-                    $this->set_message( 'Post created: ' . $audio['title'] );
+                    $this->set_message( 'Post created: ' . $audio['title'], 'success');
                 } else {
-                    $this->set_message( 'Post already exists: ' . $audio['title'], true );
+                    $this->set_message( 'Post already exists: ' . $audio['title'] );
                 }
             } else {
-                if(!$title) {
-                    $this->set_message( 'The title for the file ' . $sermon_file_name . 'was not set. This is needed to create a post with that title.', true );
+                if (!$title) {
+                    $this->set_message( 'The title for the file ' . $sermon_file_name . 'was not set. This is needed to create a post with that title.', 'error' );
                 }
             }
         }
     }
 
     /**
+     * Writes data to the file
+     *
+     * @author James Heinrich <info@getid3.org>
+     * Modified for this plugin
+     *
+     */
+    public function write_tags()
+    {
+        $TaggingFormat = 'UTF-8';
+
+        // require_once 'getid3/getid3.php';
+        // Initialize getID3 engine
+        $getID3 = new getID3;
+        $getID3->setOption(array('encoding'=>$TaggingFormat));
+
+        getid3_lib::IncludeDependency(GETID3_INCLUDEPATH.'write.php', __FILE__, true);
+
+        if (isset($_POST['filename'])) {
+            $filename = $this->folderPath . '/' . $_POST['filename'];
+            $TagFormatsToWrite = array('id3v1', 'id3v2.3');
+            $Tagdata = '';
+
+            if (!empty($TagFormatsToWrite)) {
+                // echo 'starting to write tag(s)<BR>';
+
+                $tagwriter                 = new getid3_writetags;
+                $tagwriter->filename       = $filename;
+                $tagwriter->tagformats     = $TagFormatsToWrite;
+                // $tagwriter->overwrite_tags = false; //known to be buggy
+                $tagwriter->tag_encoding   = $TaggingFormat;
+                // if (!empty($_POST['remove_other_tags'])) {
+                     //$tagwriter->remove_other_tags = false;
+                // }
+
+                // $commonkeysarray = array('title', 'artist', 'album', 'year', 'comment');
+                $commonkeysarray = array('title', 'artist', 'year', 'album', 'comment', 'genre');
+                foreach ($commonkeysarray as $key) {
+                    if (!empty($_POST[$key])) {
+                        $TagData[strtolower($key)][] = stripslashes($_POST[$key]);
+                    }
+                }
+
+                switch ( isset($_FILES['userfile']['error']) ) {
+                    case 1:
+                        $this->set_message( 'The uploaded file exceeds the upload_max_filesize directive in php.ini.', 'error' );
+                        break;
+                    case 2:
+                        $this->set_message( 'The uploaded file exceeds the MAX_FILE_SIZE directive that was specified in the HTML form.', 'error' );
+                        break;
+                    case 3:
+                        $this->set_message( 'The uploaded file was only partially uploaded.', 'error' );
+                        break;
+                    case 4:
+                        $this->set_message( 'No file was uploaded.', 'error' );
+                        break;
+                    case 6:
+                        $this->set_message( 'Missing a temporary folder.', 'error' );
+                        break;
+                    case 7:
+                        $this->set_message( 'Faild to write uploaded file to disk on the server.', 'error' );
+                        break;
+                    case 8:
+                        $this->set_message( 'A PHP extension stopped the file upload.', 'error' );
+                        break;
+                }
+
+                if (!empty($_FILES['userfile']['tmp_name'])) {
+                    if (in_array('id3v2.4', $tagwriter->tagformats) || in_array('id3v2.3', $tagwriter->tagformats) || in_array('id3v2.2', $tagwriter->tagformats)) {
+                        if (is_uploaded_file($_FILES['userfile']['tmp_name'])) {
+                            ob_start();
+                            if ($fd = fopen($_FILES['userfile']['tmp_name'], 'rb')) {
+                                ob_end_clean();
+                                $APICdata = fread($fd, filesize($_FILES['userfile']['tmp_name']));
+                                fclose($fd);
+
+                                list($APIC_width, $APIC_height, $APIC_imageTypeID) = GetImageSize($_FILES['userfile']['tmp_name']);
+                                $imagetypes = array(1=>'gif', 2=>'jpeg', 3=>'png', 4=>'jpg');
+                                if (isset($imagetypes[$APIC_imageTypeID])) {
+
+                                    $TagData['attached_picture'][0]['data']          = $APICdata;
+                                    $TagData['attached_picture'][0]['picturetypeid'] = $_POST['APICpictureType'];
+                                    $TagData['attached_picture'][0]['description']   = $_FILES['userfile']['name'];
+                                    $TagData['attached_picture'][0]['mime']          = 'image/'.$imagetypes[$APIC_imageTypeID];
+
+                                } else {
+                                    $this->set_message( 'Invalid image format (only GIF, JPEG, PNG, JPG) allowed.', true );
+                                }
+                            } else {
+                                $errormessage = ob_get_contents();
+                                ob_end_clean();
+                                $this->set_message( 'Cannot open '.$_FILES['userfile']['tmp_name'], 'error' );
+                            }
+                        } else {
+                            $this->set_message( !is_uploaded_file($_FILES['userfile']['tmp_name']), 'error' );
+                        }
+                    } else {
+                        $this->set_message( 'WARNING: Can only embed images for ID3v2.' );
+                    }
+                }
+
+                $tagwriter->tag_data = $TagData;
+
+                if ($tagwriter->WriteTags()) {
+                    $this->set_message( 'Successfully wrote tags!', 'success' );
+                    if (!empty($tagwriter->warnings)) {
+                        $this->set_message( 'There were some warnings:'.implode('<BR><BR>', $tagwriter->warnings) );
+                    }
+                } else {
+                    $this->set_message( 'FAILED to write tags: '.implode('<BR><BR>', $tagwriter->errors), 'error' );
+                }
+            } else {
+                $this->set_message( 'WARNING: no tag formats selected for writing - nothing written.' );
+            }
+
+            // renames file
+            if ( isset( $_POST['inputFileName'] ) && ($_POST['inputFileName'] !== $_POST['filename']) ) {
+            rename( $filename, $this->folderPath . '/' . $_POST['inputFileName'] );
+            }
+        }
+    }
+
+    /**
      * Determines the date to publish the post
-     * 
+     *
      * @param unknown $filename
      * String, file name
-     * 
+     *
      * @return array
-     * Keyed array with display_date, file_date 
+     * Keyed array with display_date, file_date
      */
-    public function dates( $filename ){
-
+    public function dates( $filename )
+    {
         //Get the date from the file name minus the extention
         $file_length = strlen( substr( $filename, 0, strpos( $filename, "." ) ) );
 
-        if ($file_length >= 8) {
+        if ($file_length >= 8 && is_numeric($file_length)) {
             $file_date = substr( $filename, 0, 8 );
 
             if ( is_numeric( $file_date ) ) {
-                $file_year = substr( $file_date, 0, 4 );
+                $file_year  = substr( $file_date, 0, 4 );
                 $file_month = substr( $file_date, 4, 2 );
-                $file_days = substr( $file_date, 6, 2 );
-                $file_date = $file_year . '-' . $file_month . '-' . $file_days . ' ' . '06:00:00';
-            } else
+                $file_days  = substr( $file_date, 6, 2 );
+                $file_date  = $file_year . '-' . $file_month . '-' . $file_days . ' ' . '06:00:00';
+            } else {
                 $file_date = time();
+            }
 
             $file_time = strtotime( $file_date );
 
-            $display_date = date( 'F j, Y', $file_time );
+            if($file_time) {
+                $display_date = date( 'F j, Y', $file_time );
+            } else {
+                $display_date = date( 'F j, Y', time()) ;
+                $this->set_message( 'The publish date for ' . $filename . ' could not be determined. It will be published ' . $display_date . ' if you do not change it.' );
+            }
         } else {
             $display_date = date( 'F j, Y', time() );
-            $this->set_message( $title . "'s publish date could not be determined so it will be published today." );
+            $file_date = time();
+            $this->set_message( 'The publish date for ' . $filename . ' could not be determined. It will be published ' . $display_date . ' if you do not change it.' );
         }
 
         return array(
@@ -513,23 +648,25 @@ class SermonUpload
         $get_ID3 = new getID3;
         $ThisFileInfo = $get_ID3->analyze( $filePath );
 
+        $imageWidth = "";
+        $imageHeight = "";
         /**
          * Optional: copies data from all subarrays of [tags] into [comments] so
          * metadata is all available in one location for all tag formats
          * meta information is always available under [tags] even if this is not called
          */
-        getid3_lib::CopyTagsToComments( $ThisFileInfo );
+        //getid3_lib::CopyTagsToComments( $ThisFileInfo );
 
         $tags = array('title' => sanitize_text_field( $ThisFileInfo['filename'] ), 'genre' => '', 'artist' => '', 'album' => '', 'year' => '');
 
         foreach ($tags as $key => $tag) {
-            if( array_key_exists($key, $ThisFileInfo['tags']['id3v2']) ) {
+            if ( array_key_exists($key, $ThisFileInfo['tags']['id3v2']) ) {
                 $value = sanitize_text_field( $ThisFileInfo['tags']['id3v2'][$key][0] );
                 $tags[$key] = $value;
             }
         }
 
-        if( array_key_exists($key, $ThisFileInfo['comments_html']) ) {
+        if ( isset($ThisFileInfo['comments_html']['comment']) ) {
             $value = sanitize_text_field( $ThisFileInfo['comments_html']['comment'][0] );
             $tags['comment'] = $value;
         }
@@ -537,62 +674,70 @@ class SermonUpload
         $tags['bitrate'] = sanitize_text_field( $ThisFileInfo['bitrate'] );
         $tags['length'] = sanitize_text_field( $ThisFileInfo['playtime_string'] );
 
+        if ( isset($ThisFileInfo['comments']['picture'][0]) ) {
+            $pictureData = $ThisFileInfo['comments']['picture'][0];
+            $imageinfo = array();
+            $imagechunkcheck = getid3_lib::GetDataImageSize($pictureData['data'], $imageinfo);
+            $imageWidth = "150"; //$imagechunkcheck[0];
+            $imageHeight = "150"; //$imagechunkcheck[1];
+            $tags['image'] = '<img src="data:'.$pictureData['image_mime'].';base64,'.base64_encode($pictureData['data']).'" width="'.$imageWidth.'" height="'.$imageHeight.'" class="img-polaroid">';
+        }
+
         return $tags;
     }
 
     /**
      * Display the administrative page
-     * 
+     *
      */
     public function display_admin_page()
     {
         // Posts the audio files
         if ( isset( $_POST ) && count( $_POST ) != 0 ) {
-            $this->audio_to_post( $this->folderPath );
-            // self::display_admin_notices();
+            if ( current($_POST) == 'Post' ) {
+                $this->audio_to_post();
+            } elseif ( isset($_POST['filename']) ) {
+                $this->write_tags();
+            }
         }
 
         $mp3Files = $this->mp3_array( $this->folderPath );
 
         $audio_details = "";
+        $modals ="";
         // list files and details
         foreach ($mp3Files as $file) {
-            $filePath = $this->folderPath.'/'.$file;
-            $id3Details = $this->get_ID3( $filePath );
-            $date = $this->dates( $file );
+            $filePath       = $this->folderPath.'/'.$file;
+            $id3Details     = $this->get_ID3( $filePath );
+            $date           = $this->dates( $file );
             $audio_details .= $this->display_file_details( $id3Details, $file, $date['display_date'] );
-
+            $modals        .= $this->create_modal( $id3Details, $file, $date['display_date'] );
         }
 
-        require_once 'views/admin.php';
-
         self::display_admin_notices();
-    }   
+
+        require_once 'views/admin.php';
+    }
 
     /**
      * Displays administrative warnings and errors through the 'admin_notices' action
-     * 
+     *
      */
     public function display_admin_notices()
     {
         $message_count = count( $this->messages );
         $i = 0;
         while ($i < $message_count) {
-            if ($this->messages[$i]['error']) {
-                echo '<div class="error">' . $this->messages[$i]['message'] . '</div>';
-            } else {
-                echo '<div class="updated">' . $this->messages[$i]['message'] . '</div>';
-            }
+            $type = ($this->messages[$i]['type'] == '') ? '' : " alert-" . $this->messages[$i]['type'];
+
+            echo '<div class="alert' . $type . '"><button type="button" class="close" data-dismiss="alert">&times;</button>' . $this->messages[$i]['message'] . '</div>';
             $i++;
         }
-
-        // After displaying messages, clear the array
-        //$this->clear_messages();
     }
 
     /**
      * Display file details
-     * 
+     *
      * @param array $id3Details
      * Array generated by get_ID3()
      *
@@ -601,34 +746,204 @@ class SermonUpload
      *
      * @param string $display_date
      * Date of the file taken from the file name
-     * 
+     *
      * @return string
      * Returns a string formated for display
-     * 
+     *
      */
     public function display_file_details( $id3Details, $file, $display_date )
     {
-        $info = '<li class="sermon_list_item"><strong>' . $id3Details['title'] . '</strong>
-              <input type="submit" class="button-secondary" name="'. $file . '" value="'; 
-        $info .= __('Post'); 
-        $info .= '" />
-              <ul class="stuffbox postbox">
-                
-                <li><strong>Speaker:</strong> '.$id3Details['artist'].'</li>
-                <li><strong>Comments:</strong> '.$id3Details['comment'].'</li>
-                <li><strong>Publish Date:</strong> '. $display_date .'</li>
-                <li><strong>Category:</strong> '.$id3Details['genre'].'</li>
-                <li><strong>Length:</strong> '.$id3Details['length'].'</li>
-                <li><strong>Album:</strong> '.$id3Details['album'].'</li>
-                <li><strong>Year:</strong> '.$id3Details['year'].'</li>
-                <li><strong>Bitrate:</strong> '.$id3Details['bitrate'].'</li>
-                <li><strong>File name:</strong> '.$file.'</li>
+        $displayTitle    = empty($id3Details['title']) ? $file : $id3Details['title'];
+        $displaySpeaker  = empty($id3Details['artist']) ? '&nbsp;' : $id3Details['artist'];
+        $displayText     = empty($id3Details['comment']) ? '&nbsp;' : $id3Details['comment'];
+        $displayCategory = empty($id3Details['genre']) ? '&nbsp;' : $id3Details['genre'];
+        $displayAlbum    = empty($id3Details['album']) ? '&nbsp;' : $id3Details['album'];
+        $displayYear     = empty($id3Details['year']) ? '&nbsp;' : $id3Details['year'];
+        $displayLength   = empty($id3Details['length']) ? '&nbsp;' : $id3Details['length'];
+        $displayBitrate  = empty($id3Details['bitrate']) ? '&nbsp;' : $id3Details['bitrate'];
+        $displayImage    = empty($id3Details['image']) ? '&nbsp;' : $id3Details['image'];
+        $fileUnique      = str_replace('.', '_', str_replace(' ', '_', $file));
 
-              </ul>
-          </li>
-          ';
+        $info = '<li class="sermon_dl_item">
+            <div class="btn-group">
+                <input type="submit" class="btn btn-primary" name="'. $file . '" value="' . __('Post') . '" />
+                <input type="hidden" name="filename" value="' . $file . '">
+                <button type="button" id="details-' . $fileUnique . '" class="btn">' . __('Details') . '</button>
+                <button type="button" data-toggle="modal" data-target="#edit-' . $fileUnique . '" class="btn">' . __('Edit') . '</button>
+            </div>
+            <span class="add-on"><b>' . $displayTitle . '</b></span>
+            <dl id="dl-details-' . $fileUnique . '" class="dl-horizontal">
+                <dt>Speaker:      </dt><dd>' . $displaySpeaker . '</dd>
+                <dt>Bible Text:   </dt><dd>' . $displayText . '</dd>                
+                <dt>Publish Date: </dt><dd>' . $display_date .'</dd>
+                <dt>Category:     </dt><dd>' . $displayCategory . '</dd>
+                <dt>Album:        </dt><dd>' . $displayAlbum . '</dd>
+                <dt>Year:         </dt><dd>' . $displayYear . '</dd>
+                <dt>Length:       </dt><dd>' . $displayLength . '</dd>
+                <dt>Bitrate:      </dt><dd>' . $displayBitrate . '</dd>
+                <dt>File name:    </dt><dd>' . $file . '</dd>
+                <dt>Picture:      </dt><dd>' . $displayImage . '</dd>
+        </dl>
+        </li>';
 
         return $info;
+    }
+
+    /**
+     * Create modals
+     *
+     * @param array $id3Details
+     * Array generated by get_ID3()
+     *
+     * @param string $file
+     * File name
+     *
+     * @param string $display_date
+     * Date of the file taken from the file name
+     *
+     * @return string
+     * Returns a string formated for display
+     *
+     */
+    public function create_modal( $id3Details, $file, $display_date )
+    {
+        $displayTitle    = empty($id3Details['title']) ? $file : $id3Details['title'];
+        $displaySpeaker  = empty($id3Details['artist']) ? '' : $id3Details['artist'];
+        $displayText     = empty($id3Details['comment']) ? '' : $id3Details['comment'];
+        $displayCategory = empty($id3Details['genre']) ? '' : $id3Details['genre'];
+        $displayAlbum    = empty($id3Details['album']) ? '' : $id3Details['album'];
+        $displayYear     = empty($id3Details['year']) ? '' : $id3Details['year'];
+        $displayLength   = empty($id3Details['length']) ? '' : $id3Details['length'];
+        $displayBitrate  = empty($id3Details['bitrate']) ? '' : $id3Details['bitrate'];
+
+        $fileUnique      = str_replace('.', '_', str_replace(' ', '_', $file));
+
+        // $ordinals     = array(__('first'),__('second'),__('third'));
+        // $seriesSpace  = strpos($displayText, ' ');
+        // $seriesString = substr($displayText, 0, $seriesSpace);
+
+        // if( is_numeric($seriesString) || in_array($seriesString, $ordinals) ) {
+        //         $seriesSecondSpace  = substr($displayText, strpos($displayText, ' '));
+        //         $seriesSecondString = strpos($seriesSecondSpace, ' ');
+        //         $displaySeries      = substr($displayText, 0, $seriesSecondString);
+        // } else {
+            $displaySeries = '';//substr($displayText, strpos($displayText, ' '));          
+        // }
+
+        // Picture controls
+        $selectPicture = '<input type="file" id="Picture" name="userfile" accept="image/jpeg, image/gif, image/png, image/jpg" class="input-xlarge input-block-level" disabled>';
+        $displayPicture = empty($id3Details['image']) ? $selectPicture : $selectPicture . '<br /><br />' . $id3Details['image'];
+
+        $APICtypes = getid3_id3v2::APICPictureTypeLookup('', true);
+        $pictureOptions = '';
+        foreach ($APICtypes as $key => $value) {
+            $pictureOptions .= '<option value="'.htmlentities($key, ENT_QUOTES).'">'.htmlentities($value).'</option>';
+        }
+
+        $modal = '
+           <!-- Edit Modal -->
+            <div id="edit-' . $fileUnique . '" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="modalLabel" aria-hidder="true" style="display: none">
+              <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h3 id="modalLabel">Edit Sermon Information</h3>
+              </div>
+              <div class="modal-body">
+                <div class="row-fluid">
+                  <div class="span9">
+                    <form class="form-horizontal" enctype="multipart/form-data" method="post" action="">
+                      <div class="control-group">
+                        <label class="control-label" for="inputTitle">Title</label>
+                        <div class="controls">
+                          <input type="text" id="inputTitle" name="title" placeholder="Title of Sermon" class="input-xlarge input-block-level" value="' . $displayTitle . '">
+                        </div>
+                      </div>
+                      <div class="control-group">
+                        <label class="control-label" for="inputArtist">Speaker</label>
+                        <div class="controls">
+                          <input type="text" id="inputArtist" name="artist" placeholder="Joseph H. Steele III" class="input-xlarge input-block-level" data-provide="typeahead" data-items="4" data-source="["Joseph H. Steele III", "Dr. Ralph Davis"]" value="' . $displaySpeaker . '">
+                        </div>
+                      </div>
+                      <div class="control-group">
+                        <label class="control-label" for="inputComment">Bible Text</label>
+                        <div class="controls">
+                          <input type="text" id="inputComment" name="comment" placeholder="Genesis 1:1" class="input-xlarge input-block-level" value="' . $displayText . '">
+                        </div>
+                      </div>
+                      <div class="control-group">
+                        <label class="control-label" for="inputPublishDate">Publish Date</label>
+                        <div class="controls">
+                          <input type="text" id="inputPublishDate" name="publishdate" data-date="' . date('d/m/Y', time()) . '" date-date-format="dd/mm/yyyy" data-date-autoclose="true" class="input-xlarge input-block-level" value="' . $display_date . '" disabled>
+                        </div>
+                      </div>
+                      <div class="control-group">
+                        <label class="control-label" for="inputGenre">Category</label>
+                        <div class="controls">
+                          <input type="text" id="inputGenre" name="genre" placeholder="Sermon" class="input-xlarge input-block-level" data-provide="typeahead" data-items="4" data-source="["Sermon", "Guest Speaker"]" value="' . $displayCategory . '">
+                        </div>
+                      </div>
+                      <div class="control-group">
+                        <label class="control-label" for="inputAlbum">Album</label>
+                        <div class="controls">
+                          <input type="text" id="inputAlbum" name="album" placeholder="Woodland Presbyterian Church" class="input-xlarge input-block-level" data-provide="typeahead" data-items="4" data-source="["Woodland Presbyterian Church"]" value="' . $displayAlbum . '">
+                        </div>
+                      </div>
+                       <div class="control-group">
+                        <label class="control-label" for="inputSeries">Series</label>
+                        <div class="controls">
+                          <input type="text" id="inputSeries" name="series" class="input-xlarge input-block-level" placeholder="Genesis - Not yet implemented" disabled value="' . $displaySeries . '">
+                        </div>
+                      </div>
+                      <div class="control-group">
+                        <label class="control-label" for="Year">Year</label>
+                        <div class="controls">
+                          <input type="text" id="Year" name="year" data-date="' . date('Y', time()) . '" date-date-format="yyyy" data-date-autoclose="true" data-date-startView="decade" class="input-xlarge input-block-level" placeholder="' . date('Y', time()) . '" value="' . $displayYear . '">
+                        </div>
+                      </div>
+                      <div class="control-group">
+                        <label class="control-label" for"Picture"><a href="#" data-toggle="tooltip" title="Must us a gif, png, or jpeg file.">Picture</a></label>
+                        <div class="controls">
+                            ' . $displayPicture . '
+                        </div>
+                      </div>
+                      <div class="control-group">
+                        <label class="control-label" for"PictureOptions">Picture Type</label>
+                        <div class="controls">
+                            <select id="PictureOptions" name="APICpictureType" class="input-xlarge input-block-level">' . $pictureOptions . '</select>
+                        </div>
+                      </div>
+                      <div class="control-group">
+                        <label class="control-label" for="inputLength">Length</label>
+                        <div class="controls">
+                          <span class="input-xlarge uneditable-input input-block-level" id="inputLength">' . $displayLength . ' </span>
+                        </div>
+                      </div>
+                      <div class="control-group">
+                        <label class="control-label" for="inputBitrate">Bitrate</label>
+                        <div class="controls">
+                          <span class="input-xlarge uneditable-input input-block-level" id="inputBitrate">' . $displayBitrate . ' </span>
+                        </div>
+                      </div>
+                      <div class="control-group">
+                        <label class="control-label" for="inputFileName">File name</label>
+                        <div class="controls">
+                          <input type="text" class="input-xlarge uneditable-input input-block-level" id="inputFileName" name="inputFileName" placeholder="24-10-1985 Awesome Sermon" value="' . $file . '">
+                        </div>
+                      </div>
+                      <input type="hidden" name="filename" value="' . $file . '">
+                      <input type="submit" class="btn btn-primary pull-right" name="update" value="Update File" /> 
+                    </form>
+                  </div>
+                </div>
+              </div>
+
+              <!--<div class="modal-footer">
+                <button class="btn" data-dismiss="modal" aria-hidden="true">Save</button>
+             
+              </div>-->
+ 
+            </div>';
+
+        return $modal;
     }
 
     /**
@@ -658,24 +973,23 @@ class SermonUpload
         // $folderPath = $uploadsDetails['basedir'] . '/mp3-to-post';
         // $base_path = parse_url( $uploadsDetails['baseurl'], PHP_URL_PATH );
 
-        $sermon_help_upload = '<p>' . __( 'Upload a sermon by clicking the "Upload Sermon" button. To finish the upload, in the media upload box, click "Upload Sermon" or close the box.' ) . '</p>' .
-            '<p>' . __( 'The sermons will appear in the sermon list area below. Clicking a sermon name will show more details about the sermon. If there is an error with this data, edit the file\'s ID3 information and upload again ensuring you overwrite the file.' ) . '</p>' .
-            '<p>' . __( 'Click the "Post" button next to the sermon title to post that individual sermon.' ) . '</p'.
+        $sermon_help_upload = '<p>' . __( 'Upload a sermon by clicking the "Upload Sermon" button. To finish the upload, in the media upload box, click "Upload Sermon" or close the dialog box.' ) . '</p>' .
+            '<p>' . __( 'The sermons will appear in the sermon list area below this help area.') . '</p>' .
+            '<p>' . __( 'There are three buttons next to each sermon.' ) . '</p>' .
+            '<p>' . __( 'Click the "Post" button to post the individual sermon.' ) . '</p>'.
+            '<p>' . __( 'Click the "Details" button view the details (ID3 information) about the individual sermon.' ) . '</p>'.
+            '<p>' . __( 'Click the "Edit" button to edit the information about the individual sermon.' ) . '</p>'.
             '<p>' . __( 'Click the "Post all Sermons" button to post all sermons.' ) . '</p>';
 
             $sermon_help_technical_details = '<p>' . __( 'Files are uploaded to ' ) . $this->folderPath . ' and moved on posting to'. $this->base_path . '.</p>' .
             '<p>' . __( 'This plugin only searchs for mp3 files. By changing the function mp3_only in mp3-to-post.php one can have other file types or modify the mp3_array function.' ) . '</p>' .
             '<p>' . __( 'This plugin is entirely based off of the <a href="http://www.fractured-state.com/2011/09/mp3-to-post-plugin/">mp3-to-post plugin</a> and would not be possible without Paul\'s original efforts. Also a big thanks to James the creator of the <a href="http://www.getid3.org">getID3</a> library.' ) . '</p>';
 
-        $sermon_help_preparing = '<p>' . __( 'Files must be named in the format of YYYYMMDD and either an a for AM or p for PM. For example, a sermon preached today in the morning or evening must have a file name like <strong>' ) . substr( date( 'Ymda' ), 0, -1 ) . __( '</strong> The a or p is optional. This is the date the post will be published. It is okay if it is a long time ago.' ) . '</p>'  .
-            '<p>' . __( 'This plugin creates posts from the ID3 information in each file. The ID3 information can be edited in most any music program such as iTunes, Windows Media Player, etc. and through the properties/Get Info menu.' ) . '</p>' .
+            $sermon_help_preparing = '<p>' . __( 'Files must be named in the format of YYYYMMDD and either an a for AM or p for PM. For example, a sermon preached today in the morning or evening must have a file name like <strong>' ) . substr( date( 'Ymda' ), 0, -1 ) . __( '</strong> The a or p is optional. This is the date the post will be published. It is okay if it is a long time ago.' ) . '</p>'  .
             '<p>' . __( 'For a sermon to be correctly posted ensure each sermon has the following ID3 information filled in: <br />
-          <strong>Title</strong> is the title of the sermon, example: Put Off Lying and Anger <br />
-          <strong>Genre</strong> is Sermon <br />
-          <strong>Album</strong> is Woodland Presbyterian Church <br />
-          <strong>Artist</strong> is Joseph H. Steele III <br />
-          <strong>Comment</strong> is the bible text, example: Ephesians 4:25-27 <br />
-            ' ) .
+                <strong>Title</strong> is the title of the sermon, example: Put Off Lying and Anger <br />
+                <strong>Genre</strong> is Sermon <br />
+                <strong>Comment</strong> is the bible text, example: Ephesians 4:25-27 <br />' ) .
             '<p>' . __( 'If the <strong>genre</strong> is set on the file, that will be turned in to the category. If more than one genre is set only the first one is used.  If the genre is not set, the category on the post is set to the default option.' ) . '</p>';
 
         get_current_screen()->add_help_tab( array(
@@ -709,8 +1023,6 @@ class SermonUpload
         // Create the menu item for users with "upload_files" ability
         add_menu_page( "Sermon Upload", "Sermon Upload", "upload_files", "sermon-upload", array( $this, "display_admin_page" ), plugins_url( 'sermon-upload/img/glyphicons_071_book_admin_menu.png' ), '7' );;
     }
-
-
 
     /**
      * NOTE:  Filters are points of execution in which WordPress modifies data
@@ -755,12 +1067,12 @@ class SermonUpload
     {
         if ( !empty( $path['error'] ) ) { return $path; } //error; do nothing.
         // Default set to the mp3FolderName
-        $customdir = '/mp3-to-post';
-        $path['path']    = str_replace( $path['subdir'], '', $path['path'] ); //remove default subdir (year/month)
-        $path['url']   = str_replace( $path['subdir'], '', $path['url'] );
-        $path['subdir']  = $customdir;
-        $path['path']   .= $customdir;
-        $path['url']  .= $customdir;
+        $customdir      = '/mp3-to-post';
+        $path['path']   = str_replace( $path['subdir'], '', $path['path'] ); //remove default subdir (year/month)
+        $path['url']    = str_replace( $path['subdir'], '', $path['url'] );
+        $path['subdir'] = $customdir;
+        $path['path']  .= $customdir;
+        $path['url']   .= $customdir;
         if ( !wp_mkdir_p( $path['path'] ) ) {
             return array( 'error' => sprintf( __( 'Unable to create directory %s. Is the parent directory writable by the server?' ), $path['path'] ) );
         }
@@ -784,13 +1096,6 @@ class SermonUpload
 
 } // end class
 
-// TODO: Update the instantiation call of your plugin to the name given at the class definition
 new SermonUpload();
 
-// $referer = strpos( wp_get_referer(), 'sermon-upload' );
-// if ($referer != '')
-// {
-// Changes the upload folder for the media uploader
-// add_filter('wp_handle_upload_prefilter', 'filter_sermon_upload_pre_upload');
-// add_filter('wp_handle_upload', 'filter_sermon_upload_post_upload');
-// }
+//sdg

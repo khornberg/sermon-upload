@@ -1,8 +1,27 @@
 .sermon_list_item {
-cursor:pointer
+cursor:pointer;
 }
 
 .sermon_list_item ul {
+display:none;
+padding:4px
+}
+
+
+.sermon_table_item {
+cursor:pointer;
+}
+
+.sermon_table_item table {
+display:none;
+padding:4px
+}
+
+.sermon_dl_item {
+cursor:pointer;
+}
+
+.sermon_dl_item dl {
 display:none;
 padding:4px
 }
