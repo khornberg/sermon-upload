@@ -390,6 +390,7 @@ class SermonUpload
                         'post_date'   => $date['file_date'],
                         'post_status' => 'publish'
                     );
+
                     // Insert the post!!
                     $postID = wp_insert_post( $my_post );
 
@@ -436,10 +437,16 @@ class SermonUpload
                     $attachmentLink = wp_get_attachment_link( $attach_id, 'thumbnail', FALSE, FALSE, 'Download file' );
 
                     // content of the post to be published
-                    $content = '[audio] <br />
-                    <p>Text: ' . (isset($audio['comment']) && !is_null($audio['comment'])) ? $audio['comment'] : "" . '</p>
-                    <p>Speaker: ' . (is_null($audio['artist']) && !is_null($audio['artist'])) ? $audio['artist'] : "" . '</p>
-                    <p>Date: ' . $date['display_date'] . '</p><br />' .
+                    $content = '[audio] <br />';
+                    if ( !empty($audio['comment']) ) {
+                        $content .= '<p>Text: ' . $audio['comment'] . '</p>';
+                    }
+
+                    if ( !empty($audio['artist']) ) {
+                        $content .= '<p>Speaker: ' . $audio['artist'] . '</p>';
+                    }
+
+                    $content .= '<p>Date: ' . $date['display_date'] . '</p><br />' .
                     do_shortcode( '[download label="Download"]' . $wpFileInfo['file'] . '[/download]' );
 
                     $updatePost                   = get_post( $postID );
@@ -604,8 +611,10 @@ class SermonUpload
                 $file_month = substr( $file_date, 4, 2 );
                 $file_days  = substr( $file_date, 6, 2 );
                 $file_date  = $file_year . '-' . $file_month . '-' . $file_days . ' ' . '06:00:00';
+                $publish_date = $file_date;
             } else {
                 $file_date = time();
+                $publish_date = date( 'Y-m-d', time() );
             }
 
             $file_time = strtotime( $file_date );
@@ -618,13 +627,13 @@ class SermonUpload
             }
         } else {
             $display_date = date( 'F j, Y', time() );
-            $file_date = time();
+            $publish_date = date( 'Y-m-d', time() );
             $this->set_message( 'The publish date for ' . $filename . ' could not be determined. It will be published ' . $display_date . ' if you do not change it.' );
         }
 
         return array(
             'display_date' => $display_date,
-            'file_date' => $file_date,
+            'file_date' => $publish_date,
             );
     }
 

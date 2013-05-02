@@ -37,7 +37,7 @@ This is customized for my local church.
 
 #### 1.1
 * Added ability to edit tags in the browser
-* Changed Instructions
+* Changed instructions
 * Changed UI (modal, bootstrap, buttons)
 
 #### 1.0.2
