@@ -7,11 +7,13 @@
     <br />
     <br />
 
-    <form method="post" action="">
+    
       <?php
         if($audio_details !== "") {
       ?>
+        <form method="post" action="">
           <input type="submit" class="btn btn-primary" name="create-all-posts" value="<?php _e('Post all Sermons') ?>" />
+        </form>
           <h4><?php _e('Sermons listed by file name and shown with the sermon title.'); ?></h4>
       <?php
         } else {
@@ -23,7 +25,6 @@
       <ul class="unstyled">
         <?php echo $audio_details; ?>
       </ul>
-    </form>
   </div>
 
 <?php echo $modals; ?>

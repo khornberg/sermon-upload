@@ -3,7 +3,7 @@
  * Plugin Name: Sermon Upload
  * Plugin URI: https://github.com/khornberg/sermon-upload
  * Description: Uploads sermons for Woodland Presbyterian Church. Based off of MP3 to Post plugin by Paul  * Sheldrake. Creates posts using ID3 information in MP3 files.
- * Version: 1.0.2
+ * Version: 1.1
  * Author: Kyle Hornberg
  * Author URI: https://github.com/khornberg
  * Author Email:
@@ -119,7 +119,7 @@ class SermonUpload
         add_action( 'admin_menu', array( $this, 'action_add_menu_page' ) );
 
         // TODO Display messages NOT running at a time when messages are there
-        //add_action( 'admin_notices', array( $this, 'display_admin_notices') );
+        //add_action( 'admin_notices', array( $this, 'display_notices') );
 
     } // end constructor
 
@@ -339,18 +339,11 @@ class SermonUpload
             return;
         }
 
-
-        $post_all = key( $_POST );
+        $post_all = isset( $_POST['create-all-posts'] );
         $sermon_file_name = $_POST['filename'];
-        // $last_ = strrpos($sermon_file_name_post, '_');
-        // // $sermon_file_name = str_replace( '_', '.', $sermon_file_name_post );
-        // $sermon_file_name = $sermon_file_name_post;
-        // if($last_ !== false) {
-        //     $sermon_file_name[$last_] = '.';
-        // }
 
         // loop through all the files and create posts
-        if ($post_all == 'create-all-posts') {
+        if ($post_all) {
             $limit = count( $mp3Files );
             $sermon_to_post = 0;
         } else {
@@ -372,6 +365,8 @@ class SermonUpload
             $filePath = $this->folderPath . '/' . $mp3Files[$i];
 
             // TODO This may be redundent could just send via POST; security vunerablity?
+            // Sending via post will not write the changes the to the file.
+            // May be useful for changing/setting the publish date
             $audio = $this->get_ID3($filePath);
 
             $date = $this->dates($mp3Files[$i]);
@@ -399,8 +394,8 @@ class SermonUpload
                     $postID = wp_insert_post( $my_post );
 
                     // If the category/genre is set then update the post
-                    if ( !empty( $category ) ) {
-                        $category_ID = get_cat_ID( $category );
+                    if ( !empty( $audio['category'] ) ) {
+                        $category_ID = get_cat_ID( $audio['category'] );
                         // if a category exists
                         if ($category_ID) {
                             $categories_array = array( $category_ID );
@@ -408,7 +403,7 @@ class SermonUpload
                         }
                         // if it doesn't exist then create a new category
                         else {
-                            $new_category_ID = wp_create_category( $category );
+                            $new_category_ID = wp_create_category( $audio['category'] );
                             $categories_array = array( $new_category_ID );
                             wp_set_post_categories( $postID, $categories_array );
                         }
@@ -442,8 +437,8 @@ class SermonUpload
 
                     // content of the post to be published
                     $content = '[audio] <br />
-                    <p>Text: ' . (empty($audio['comment'])) ? '' : $audio['comment'] . '</p>
-                    <p>Speaker: ' . (empty($audio['artist'])) ? '' : $audio['artist'] . '</p>
+                    <p>Text: ' . (isset($audio['comment'])) ? $audio['comment'] : '' . '</p>
+                    <p>Speaker: ' . (isset($audio['artist'])) ?$audio['artist'] : '' . '</p>
                     <p>Date: ' . $date['display_date'] . '</p><br />' .
                     do_shortcode( '[download label="Download"]' . $wpFileInfo['file'] . '[/download]' );
 
@@ -497,7 +492,7 @@ class SermonUpload
                 // $tagwriter->overwrite_tags = false; //known to be buggy
                 $tagwriter->tag_encoding   = $TaggingFormat;
                 // if (!empty($_POST['remove_other_tags'])) {
-                     //$tagwriter->remove_other_tags = false;
+                     $tagwriter->remove_other_tags = false;
                 // }
 
                 // $commonkeysarray = array('title', 'artist', 'album', 'year', 'comment');
@@ -508,63 +503,63 @@ class SermonUpload
                     }
                 }
 
-                switch ( isset($_FILES['userfile']['error']) ) {
-                    case 1:
-                        $this->set_message( 'The uploaded file exceeds the upload_max_filesize directive in php.ini.', 'error' );
-                        break;
-                    case 2:
-                        $this->set_message( 'The uploaded file exceeds the MAX_FILE_SIZE directive that was specified in the HTML form.', 'error' );
-                        break;
-                    case 3:
-                        $this->set_message( 'The uploaded file was only partially uploaded.', 'error' );
-                        break;
-                    case 4:
-                        $this->set_message( 'No file was uploaded.', 'error' );
-                        break;
-                    case 6:
-                        $this->set_message( 'Missing a temporary folder.', 'error' );
-                        break;
-                    case 7:
-                        $this->set_message( 'Faild to write uploaded file to disk on the server.', 'error' );
-                        break;
-                    case 8:
-                        $this->set_message( 'A PHP extension stopped the file upload.', 'error' );
-                        break;
-                }
+                // switch ( isset($_FILES['userfile']['error']) ) {
+                //     case 1:
+                //         $this->set_message( 'The uploaded file exceeds the upload_max_filesize directive in php.ini.', 'error' );
+                //         break;
+                //     case 2:
+                //         $this->set_message( 'The uploaded file exceeds the MAX_FILE_SIZE directive that was specified in the HTML form.', 'error' );
+                //         break;
+                //     case 3:
+                //         $this->set_message( 'The uploaded file was only partially uploaded.', 'error' );
+                //         break;
+                //     case 4:
+                //         $this->set_message( 'No file was uploaded.', 'error' );
+                //         break;
+                //     case 6:
+                //         $this->set_message( 'Missing a temporary folder.', 'error' );
+                //         break;
+                //     case 7:
+                //         $this->set_message( 'Faild to write uploaded file to disk on the server.', 'error' );
+                //         break;
+                //     case 8:
+                //         $this->set_message( 'A PHP extension stopped the file upload.', 'error' );
+                //         break;
+                // }
 
-                if (!empty($_FILES['userfile']['tmp_name'])) {
-                    if (in_array('id3v2.4', $tagwriter->tagformats) || in_array('id3v2.3', $tagwriter->tagformats) || in_array('id3v2.2', $tagwriter->tagformats)) {
-                        if (is_uploaded_file($_FILES['userfile']['tmp_name'])) {
-                            ob_start();
-                            if ($fd = fopen($_FILES['userfile']['tmp_name'], 'rb')) {
-                                ob_end_clean();
-                                $APICdata = fread($fd, filesize($_FILES['userfile']['tmp_name']));
-                                fclose($fd);
+                // if (!empty($_FILES['userfile']['tmp_name'])) {
+                //     if (in_array('id3v2.4', $tagwriter->tagformats) || in_array('id3v2.3', $tagwriter->tagformats) || in_array('id3v2.2', $tagwriter->tagformats)) {
+                //         if (is_uploaded_file($_FILES['userfile']['tmp_name'])) {
+                //             ob_start();
+                //             if ($fd = fopen($_FILES['userfile']['tmp_name'], 'rb')) {
+                //                 ob_end_clean();
+                //                 $APICdata = fread($fd, filesize($_FILES['userfile']['tmp_name']));
+                //                 fclose($fd);
 
-                                list($APIC_width, $APIC_height, $APIC_imageTypeID) = GetImageSize($_FILES['userfile']['tmp_name']);
-                                $imagetypes = array(1=>'gif', 2=>'jpeg', 3=>'png', 4=>'jpg');
-                                if (isset($imagetypes[$APIC_imageTypeID])) {
+                //                 list($APIC_width, $APIC_height, $APIC_imageTypeID) = GetImageSize($_FILES['userfile']['tmp_name']);
+                //                 $imagetypes = array(1=>'gif', 2=>'jpeg', 3=>'png', 4=>'jpg');
+                //                 if (isset($imagetypes[$APIC_imageTypeID])) {
 
-                                    $TagData['attached_picture'][0]['data']          = $APICdata;
-                                    $TagData['attached_picture'][0]['picturetypeid'] = $_POST['APICpictureType'];
-                                    $TagData['attached_picture'][0]['description']   = $_FILES['userfile']['name'];
-                                    $TagData['attached_picture'][0]['mime']          = 'image/'.$imagetypes[$APIC_imageTypeID];
+                //                     $TagData['attached_picture'][0]['data']          = $APICdata;
+                //                     $TagData['attached_picture'][0]['picturetypeid'] = $_POST['APICpictureType'];
+                //                     $TagData['attached_picture'][0]['description']   = $_FILES['userfile']['name'];
+                //                     $TagData['attached_picture'][0]['mime']          = 'image/'.$imagetypes[$APIC_imageTypeID];
 
-                                } else {
-                                    $this->set_message( 'Invalid image format (only GIF, JPEG, PNG, JPG) allowed.', true );
-                                }
-                            } else {
-                                $errormessage = ob_get_contents();
-                                ob_end_clean();
-                                $this->set_message( 'Cannot open '.$_FILES['userfile']['tmp_name'], 'error' );
-                            }
-                        } else {
-                            $this->set_message( !is_uploaded_file($_FILES['userfile']['tmp_name']), 'error' );
-                        }
-                    } else {
-                        $this->set_message( 'WARNING: Can only embed images for ID3v2.' );
-                    }
-                }
+                //                 } else {
+                //                     $this->set_message( 'Invalid image format (only GIF, JPEG, PNG, JPG) allowed.', true );
+                //                 }
+                //             } else {
+                //                 $errormessage = ob_get_contents();
+                //                 ob_end_clean();
+                //                 $this->set_message( 'Cannot open '.$_FILES['userfile']['tmp_name'], 'error' );
+                //             }
+                //         } else {
+                //             $this->set_message( !is_uploaded_file($_FILES['userfile']['tmp_name']), 'error' );
+                //         }
+                //     } else {
+                //         $this->set_message( 'WARNING: Can only embed images for ID3v2.' );
+                //     }
+                // }
 
                 $tagwriter->tag_data = $TagData;
 
@@ -577,7 +572,7 @@ class SermonUpload
                     $this->set_message( 'FAILED to write tags: '.implode('<BR><BR>', $tagwriter->errors), 'error' );
                 }
             } else {
-                $this->set_message( 'WARNING: no tag formats selected for writing - nothing written.' );
+                $this->set_message( 'WARNING: no tag formats selected for writing - nothing written.', 'error' );
             }
 
             // renames file
@@ -655,7 +650,7 @@ class SermonUpload
          * metadata is all available in one location for all tag formats
          * meta information is always available under [tags] even if this is not called
          */
-        //getid3_lib::CopyTagsToComments( $ThisFileInfo );
+        getid3_lib::CopyTagsToComments( $ThisFileInfo );
 
         $tags = array('title' => sanitize_text_field( $ThisFileInfo['filename'] ), 'genre' => '', 'artist' => '', 'album' => '', 'year' => '');
 
@@ -687,14 +682,14 @@ class SermonUpload
     }
 
     /**
-     * Display the administrative page
+     * Display the sermon upload page
      *
      */
-    public function display_admin_page()
+    public function display_plugin_page()
     {
         // Posts the audio files
-        if ( isset( $_POST ) && count( $_POST ) != 0 ) {
-            if ( current($_POST) == 'Post' ) {
+        if ( isset( $_POST ) ) {
+            if ( isset($_POST['post']) || isset($_POST['create-all-posts']) ) {
                 $this->audio_to_post();
             } elseif ( isset($_POST['filename']) ) {
                 $this->write_tags();
@@ -714,7 +709,7 @@ class SermonUpload
             $modals        .= $this->create_modal( $id3Details, $file, $date['display_date'] );
         }
 
-        self::display_admin_notices();
+        self::display_notices();
 
         require_once 'views/admin.php';
     }
@@ -723,7 +718,7 @@ class SermonUpload
      * Displays administrative warnings and errors through the 'admin_notices' action
      *
      */
-    public function display_admin_notices()
+    public function display_notices()
     {
         $message_count = count( $this->messages );
         $i = 0;
@@ -765,13 +760,16 @@ class SermonUpload
         $fileUnique      = str_replace('.', '_', str_replace(' ', '_', $file));
 
         $info = '<li class="sermon_dl_item">
+            <form method="post" action="">
             <div class="btn-group">
                 <input type="submit" class="btn btn-primary" name="'. $file . '" value="' . __('Post') . '" />
                 <input type="hidden" name="filename" value="' . $file . '">
+                <input type="hidden" name="post" value="Post">
                 <button type="button" id="details-' . $fileUnique . '" class="btn">' . __('Details') . '</button>
                 <button type="button" data-toggle="modal" data-target="#edit-' . $fileUnique . '" class="btn">' . __('Edit') . '</button>
             </div>
             <span class="add-on"><b>' . $displayTitle . '</b></span>
+            </form>
             <dl id="dl-details-' . $fileUnique . '" class="dl-horizontal">
                 <dt>Speaker:      </dt><dd>' . $displaySpeaker . '</dd>
                 <dt>Bible Text:   </dt><dd>' . $displayText . '</dd>                
@@ -1021,7 +1019,7 @@ class SermonUpload
     public function action_add_menu_page()
     {
         // Create the menu item for users with "upload_files" ability
-        add_menu_page( "Sermon Upload", "Sermon Upload", "upload_files", "sermon-upload", array( $this, "display_admin_page" ), plugins_url( 'sermon-upload/img/glyphicons_071_book_admin_menu.png' ), '7' );;
+        add_menu_page( "Sermon Upload", "Sermon Upload", "upload_files", "sermon-upload", array( $this, "display_plugin_page" ), plugins_url( 'sermon-upload/img/glyphicons_071_book_admin_menu.png' ), '7' );;
     }
 
     /**
