@@ -1,7 +1,7 @@
 <div class="wrap">
     <h2>Sermon Upload</h2>
 
-    <p><?php _e('For help using this plugin, click the help menu up there a little bit to the right of this and under your name.'); ?></p>
+    <p><?php _e('For help using this plugin, click the help menu in the upper right hand corner.'); ?></p>
 
     <input id="sermon_upload_button" type="button" value="Upload Sermon(s)" class="btn" />
     <br />
