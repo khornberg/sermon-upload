@@ -437,8 +437,8 @@ class SermonUpload
 
                     // content of the post to be published
                     $content = '[audio] <br />
-                    <p>Text: ' . (isset($audio['comment'])) ? $audio['comment'] : '' . '</p>
-                    <p>Speaker: ' . (isset($audio['artist'])) ?$audio['artist'] : '' . '</p>
+                    <p>Text: ' . (isset($audio['comment']) && !is_null($audio['comment'])) ? $audio['comment'] : "" . '</p>
+                    <p>Speaker: ' . (is_null($audio['artist']) && !is_null($audio['artist'])) ? $audio['artist'] : "" . '</p>
                     <p>Date: ' . $date['display_date'] . '</p><br />' .
                     do_shortcode( '[download label="Download"]' . $wpFileInfo['file'] . '[/download]' );
 
