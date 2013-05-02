@@ -24,14 +24,16 @@ This is customized for my local church.
 ### TODO
 - Update to getID3 1.9.5
 - Change to bootstrap version
-- Update media loader box
 - Code comments
 - Plugin options
-- Connect to post meta data (series)
-- Added meta data options to edit post page
+- Connect to post meta data (e.g. series, tags, etc.)
+- Add meta data options to edit post page
 - Add support for other audio formats and id3 versions
 - Get picture uploads working
 - Fix modal UI submit button position (error submitting the forms if in the footer)
+- Change "Save all changes" in media modal to "Upload Sermons"
+- Override "Save all changes" button to close the medial modal and refesh the page
+- Update media loader box with ID3 data
 
 ### Changelog 
 

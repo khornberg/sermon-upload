@@ -340,13 +340,13 @@ class SermonUpload
         }
 
         $post_all = isset( $_POST['create-all-posts'] );
-        $sermon_file_name = $_POST['filename'];
 
         // loop through all the files and create posts
         if ($post_all) {
             $limit = count( $mp3Files );
             $sermon_to_post = 0;
         } else {
+            $sermon_file_name = $_POST['filename'];
             $sermon_to_post = array_search( $sermon_file_name, $mp3Files, true );
 
             if ($sermon_to_post === false) {
