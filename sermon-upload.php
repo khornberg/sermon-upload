@@ -989,27 +989,28 @@ class SermonUpload
             '<p>' . __( 'Click the "Post all Sermons" button to post all sermons.' ) . '</p>';
 
             $sermon_help_technical_details = '<p>' . __( 'Files are uploaded to ' ) . $this->folderPath . ' and moved on posting to'. $this->base_path . '.</p>' .
-            '<p>' . __( 'This plugin only searchs for mp3 files. By changing the function mp3_only in mp3-to-post.php one can have other file types or modify the mp3_array function.' ) . '</p>' .
+            '<p>' . __( 'This plugin only searchs for mp3 files. By changing the function mp3_only in sermon-upload.php, one can have other file types or modify the mp3_array function.' ) . '</p>' .
             '<p>' . __( 'This plugin is entirely based off of the <a href="http://www.fractured-state.com/2011/09/mp3-to-post-plugin/">mp3-to-post plugin</a> and would not be possible without Paul\'s original efforts. Also a big thanks to James the creator of the <a href="http://www.getid3.org">getID3</a> library.' ) . '</p>';
 
-            $sermon_help_preparing = '<p>' . __( 'Files must be named in the format of YYYYMMDD and either an a for AM or p for PM. For example, a sermon preached today in the morning or evening must have a file name like <strong>' ) . substr( date( 'Ymda' ), 0, -1 ) . __( '</strong> The a or p is optional. This is the date the post will be published. It is okay if it is a long time ago.' ) . '</p>'  .
-            '<p>' . __( 'For a sermon to be correctly posted ensure each sermon has the following ID3 information filled in: <br />
-                <strong>Title</strong> is the title of the sermon, example: Put Off Lying and Anger <br />
-                <strong>Genre</strong> is Sermon <br />
-                <strong>Comment</strong> is the bible text, example: Ephesians 4:25-27 <br />' ) .
-            '<p>' . __( 'If the <strong>genre</strong> is set on the file, that will be turned in to the category. If more than one genre is set only the first one is used.  If the genre is not set, the category on the post is set to the default option.' ) . '</p>';
+            $sermon_help_preparing = '<p>' . __( 'Files must have YYYYMMDD at the begining of the file name. An a for AM or p for PM may be placed immediately after the date to inidcate a morning or evening sermon. For example, a sermon preached today in the morning or evening must have a file name that beings with <b>' ) . substr( date( 'Ymda' ), 0, -1 ) . __( '</b>. This is the date the sermon was preached and day the post will be published. It is okay if it is a long time ago. This will ensure chronological ordering.' ) . '</p>' .
+            '<p>' . __( 'For a sermon to be correctly posted ensure each sermon has the following information filled in: <br />
+                <b>Title</b> is the title of the sermon, example: Put Off Lying and Anger <br />
+                <b>Genre</b> is Sermon <br />
+                <b>Comment</b> is the bible text, example: Ephesians 4:25-27 <br />
+                This information can be edited by clicking the "Edit" button next to each sermon.' ) .
+            '<p>' . __( 'If the <b>genre</b> is set on the file, that will be turned in to the category the post is catorgized under. If more than one genre is set only the first one is used.  If the genre is not set, the category on the post is set to the default Word Press option.' ) . '</p>';
 
         get_current_screen()->add_help_tab( array(
                 'id'      => 'sermon',
-                'title'   => __( 'Uploading Sermons' ),
-                'content' => $sermon_help_upload,
+                'title'   => __( 'Preparing Sermons for Upload' ),
+                'content' => $sermon_help_preparing,
             )
         );
 
         get_current_screen()->add_help_tab( array(
                 'id'      => 'sermon2',
-                'title'   => __( 'Preparing Sermons for Upload' ),
-                'content' => $sermon_help_preparing,
+                'title'   => __( 'Uploading Sermons' ),
+                'content' => $sermon_help_upload,
             )
         );
 
