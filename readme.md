@@ -43,7 +43,7 @@ This is customized for my local church.
 * Changed UI (modal, bootstrap, buttons)
 
 #### 1.0.2
-* Restructured code to the [Wordpress boilderplate plugin](http://)
+* Restructured code to the [Wordpress boilderplate plugin](https://github.com/tommcfarlin/WordPress-Plugin-Boilerplate)
 * Publish specific post
 * Errors/Post information
 * File errors
