@@ -1,8 +1,8 @@
 # Sermon Upload
-- Contributors: paulsheldrake, kyle hornberg
-- Tags: mp3, podcasting, id3, podcast, podcaster, audio, music, spokenword
+- Contributors: paulsheldrake, khornberg
+- Tags: mp3, podcasting, id3, podcast, podcaster, audio, music, spokenword, sermon
 - Requires at least: 3.0
-- Tested up to: 3.4.1
+- Tested up to: 3.5.1
 - Stable tag: 1.1
 - License: GPLv3
 
