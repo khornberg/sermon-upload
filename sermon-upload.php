@@ -9,7 +9,7 @@
  * Author Email:
  * License:
  *
- *  Copyright 2013 Kyle Hornberg
+ *  Copyright 2013
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License, version 2, as
@@ -293,7 +293,7 @@ class SermonUpload
         // scan folders for files and get id3 info
         $mp3Files = array_slice( scandir( $folderPath ), 2 ); // cut out the dots..
         // filter out all the non mp3 files
-        $mp3Files = array_filter( $mp3Files, "self::mp3_only" );
+        $mp3Files = array_filter( $mp3Files, $this->mp3_only );
         // sort the files
         sort( $mp3Files );
 
@@ -395,8 +395,8 @@ class SermonUpload
                     $postID = wp_insert_post( $my_post );
 
                     // If the category/genre is set then update the post
-                    if ( !empty( $audio['category'] ) ) {
-                        $category_ID = get_cat_ID( $audio['category'] );
+                    if ( !empty( $audio['genre'] ) ) {
+                        $category_ID = get_cat_ID( $audio['genre'] );
                         // if a category exists
                         if ($category_ID) {
                             $categories_array = array( $category_ID );
@@ -404,7 +404,7 @@ class SermonUpload
                         }
                         // if it doesn't exist then create a new category
                         else {
-                            $new_category_ID = wp_create_category( $audio['category'] );
+                            $new_category_ID = wp_create_category( $audio['genre'] );
                             $categories_array = array( $new_category_ID );
                             wp_set_post_categories( $postID, $categories_array );
                         }
@@ -436,18 +436,18 @@ class SermonUpload
                     // add the link to the attachment to the post
                     $attachmentLink = wp_get_attachment_link( $attach_id, 'thumbnail', FALSE, FALSE, 'Download file' );
 
-                    // content of the post to be published
-                    $content = '[audio] <br />';
+                    // content of the post
+                    $content = '[audio src="' . get_site_url() . $wpFileInfo['file'] . '" preload="true"] <br /><br />';
                     if ( !empty($audio['comment']) ) {
-                        $content .= '<p>Text: ' . $audio['comment'] . '</p>';
+                        $content .= '<p><b>Text:</b> ' . $audio['comment'] . '<br />';
                     }
 
                     if ( !empty($audio['artist']) ) {
-                        $content .= '<p>Speaker: ' . $audio['artist'] . '</p>';
+                        $content .= '<b>Speaker:</b> ' . $audio['artist'] . '<br />';
                     }
 
-                    $content .= '<p>Date: ' . $date['display_date'] . '</p><br />' .
-                    do_shortcode( '[download label="Download"]' . $wpFileInfo['file'] . '[/download]' );
+                    // $content .= '<p>Date: ' . $date['display_date'] . '</p><br />' .
+                    $content .= '</p> [download label="Download"]' . get_site_url() . $wpFileInfo['file'] . '[/download]';
 
                     $updatePost                   = get_post( $postID );
                     $updated_post                 = array();
