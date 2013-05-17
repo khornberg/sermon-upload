@@ -293,7 +293,7 @@ class SermonUpload
         // scan folders for files and get id3 info
         $mp3Files = array_slice( scandir( $folderPath ), 2 ); // cut out the dots..
         // filter out all the non mp3 files
-        $mp3Files = array_filter( $mp3Files, this::mp3_only( $folderPath) );
+        $mp3Files = array_filter( $mp3Files, self::mp3_only( $folderPath) );
         // sort the files
         sort( $mp3Files );
 
