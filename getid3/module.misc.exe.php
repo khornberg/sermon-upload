@@ -17,7 +17,7 @@
 class getid3_exe extends getid3_handler
 {
 
-	function Analyze() {
+	public function Analyze() {
 		$info = &$this->getid3->info;
 
 		fseek($this->getid3->fp, $info['avdataoffset'], SEEK_SET);
@@ -50,12 +50,9 @@ class getid3_exe extends getid3_handler
 		$info['exe']['mz']['memory_minimum']     = $info['exe']['mz']['raw']['min_memory_paragraphs'] * 16;
 		$info['exe']['mz']['memory_recommended'] = $info['exe']['mz']['raw']['max_memory_paragraphs'] * 16;
 
-$info['error'][] = 'EXE parsing not enabled in this version of getID3()';
+$info['error'][] = 'EXE parsing not enabled in this version of getID3() ['.$this->getid3->version().']';
 return false;
 
 	}
 
 }
-
-
-?>
