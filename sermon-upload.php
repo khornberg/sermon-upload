@@ -36,7 +36,7 @@ class SermonUpload
     protected $mp3FolderName = 'mp3-to-post';
 
     protected $uploadsDetails = array();
-    
+
     /**
      * Path to the folder containing mp3s, sermons, or files
      *
@@ -385,75 +385,105 @@ class SermonUpload
                     // create basic post with info from ID3 details
                     $my_post = array(
                         'post_title'  => $audio['title'],
-                        'post_author' => 1,
                         'post_name'   => $audio['title'],
                         'post_date'   => $date['file_date'],
-                        'post_status' => 'publish'
+                        'post_status' => 'draft',
+                        'post_type'   => 'wpfc_sermon',
+                        'tax_input'   => array (
+                                            'wpfc_preacher'      => $audio['artist'],
+                                            'wpfc_sermon_series' => 'Test Series',
+                                            'wpfc_sermon_topics' => 'Test Topics',
+                                            'wpfc_bible_book'    => 'Test bible book',
+                                            'wpfc_service_type'  => 'Test service type',
+                                            // TODO add custom bindings for woodland and then generalize
+                            )
                     );
 
                     // Insert the post!!
-                    $postID = wp_insert_post( $my_post );
+                    // $post_id = wp_insert_post( $my_post );
 
-                    // If the category/genre is set then update the post
-                    if ( !empty( $audio['genre'] ) ) {
-                        $category_ID = get_cat_ID( $audio['genre'] );
-                        // if a category exists
-                        if ($category_ID) {
-                            $categories_array = array( $category_ID );
-                            wp_set_post_categories( $postID, $categories_array );
-                        }
-                        // if it doesn't exist then create a new category
-                        else {
-                            $new_category_ID = wp_create_category( $audio['genre'] );
-                            $categories_array = array( $new_category_ID );
-                            wp_set_post_categories( $postID, $categories_array );
-                        }
-                    }
+                    // // If the category/genre is set then update the post
+                    // if ( !empty( $audio['genre'] ) ) {
+                    //     $category_ID = get_cat_ID( $audio['genre'] );
+                    //     // if a category exists
+                    //     if ($category_ID) {
+                    //         $categories_array = array( $category_ID );
+                    //         wp_set_post_categories( $post_id, $categories_array );
+                    //     }
+                    //     // if it doesn't exist then create a new category
+                    //     else {
+                    //         $new_category_ID = wp_create_category( $audio['genre'] );
+                    //         $categories_array = array( $new_category_ID );
+                    //         wp_set_post_categories( $post_id, $categories_array );
+                    //     }
+                    // }
 
-                    // move the file to the right month/date directory in wordpress
-                    $wpFileInfo = wp_upload_bits( basename( $filePath ), null, file_get_contents( $filePath ) );
-                    // if moved correctly delete the original
-                    if ( empty( $wpFileInfo['error'] ) ) {
-                        unlink( $filePath );
-                    }
+                    // // move the file to the right month/date directory in wordpress
+                    // $wpFileInfo = wp_upload_bits( basename( $filePath ), null, file_get_contents( $filePath ) );
+                    // // if moved correctly delete the original
+                    // if ( empty( $wpFileInfo['error'] ) ) {
+                    //     unlink( $filePath );
+                    // }
 
-                    // add the mp3 file to the post as an attachment
-                    $wp_filetype = wp_check_filetype( basename( $wpFileInfo['file'] ), null );
-                    $attachment = array(
-                        'post_mime_type' => $wp_filetype['type'],
-                        'post_title'     => preg_replace( '/\.[^.]+$/', '', basename( $wpFileInfo['file'] ) ),
-                        'post_content'   => '', //TODO Add ID3 info???
-                        'post_status'    => 'inherit'
-                    );
-                    $attach_id = wp_insert_attachment( $attachment, $wpFileInfo['file'], $postID );
+                    // // Assumes file is not in the media library
+                    // // TODO in WP 3.6b4 media library shows a file unattached to anything
+                    // // add the mp3 file to the post as an attachment
+                    // $wp_filetype = wp_check_filetype( basename( $wpFileInfo['file'] ), null );
+                    // $attachment = array(
+                    //     'post_mime_type' => $wp_filetype['type'],
+                    //     'post_title'     => preg_replace( '/\.[^.]+$/', '', basename( $wpFileInfo['file'] ) ),
+                    //     'post_content'   => '',
+                    //     'post_status'    => 'inherit'
+                    // );
+                    // $attach_id = wp_insert_attachment( $attachment, $wpFileInfo['file'], $post_id );
 
-                    // you must first include the image.php file
-                    // for the function wp_generate_attachment_metadata() to work
-                    require_once ABSPATH . 'wp-admin/includes/image.php';
-                    $attach_data = wp_generate_attachment_metadata( $attach_id, $wpFileInfo['file'] );
-                    wp_update_attachment_metadata( $attach_id, $attach_data );
+                    // // you must first include the image.php file
+                    // // for the function wp_generate_attachment_metadata() to work
+                    // require_once ABSPATH . 'wp-admin/includes/image.php';
+                    // $attach_data = wp_generate_attachment_metadata( $attach_id, $wpFileInfo['file'] );
+                    // wp_update_attachment_metadata( $attach_id, $attach_data );
 
-                    // add the link to the attachment to the post
-                    $attachmentLink = wp_get_attachment_link( $attach_id, 'thumbnail', FALSE, FALSE, 'Download file' );
+                    // // add the link to the attachment to the post
+                    // $attachmentLink = wp_get_attachment_link( $attach_id, 'thumbnail', FALSE, FALSE, 'Download file' );
 
-                    // content of the post
-                    $content = '[audio src="' . get_site_url() . $wpFileInfo['file'] . '" preload="true"] <br /><br />';
-                    if ( !empty($audio['comment']) ) {
-                        $content .= '<p><b>Text:</b> ' . $audio['comment'] . '<br />';
-                    }
+                    // // content of the post
+                    // $content = '[audio src="' . get_site_url() . $wpFileInfo['file'] . '" preload="true"] <br /><br />';
+                    // if ( !empty($audio['comment']) ) {
+                    //     $content .= '<p><b>Text:</b> ' . $audio['comment'] . '<br />';
+                    // }
 
-                    if ( !empty($audio['artist']) ) {
-                        $content .= '<b>Speaker:</b> ' . $audio['artist'] . '<br />';
-                    }
+                    // if ( !empty($audio['artist']) ) {
+                    //     $content .= '<b>Speaker:</b> ' . $audio['artist'] . '<br />';
+                    // }
 
-                    // $content .= '<p>Date: ' . $date['display_date'] . '</p><br />' .
-                    $content .= '</p> [download label="Download"]' . get_site_url() . $wpFileInfo['file'] . '[/download]';
+                    // // $content .= '<p>Date: ' . $date['display_date'] . '</p><br />' .
+                    // $content .= '</p> [download label="Download"]' . $wpFileInfo['url'] . '[/download]';
 
-                    $updatePost                   = get_post( $postID );
-                    $updated_post                 = array();
-                    $updated_post['ID']           = $postID;
-                    $updated_post['post_content'] = $updatePost->post_content . $content;
-                    wp_update_post( $updated_post );
+                    // $updatePost                   = get_post( $post_id );
+                    // $updated_post                 = array();
+                    // $updated_post['ID']           = $post_id;
+                    // $updated_post['post_content'] = $updatePost->post_content . $content;
+                    // wp_update_post( $updated_post );
+
+                    var_dump( $wpFileInfo);
+
+                    // add_post_meta( $post_id, 'sermon_date', $date['unix_date'], $unique = false );
+                    // add_post_meta( $post_id, 'bible_passage', $audio['comment'], $unique = false );
+                    // add_post_meta( $post_id, 'sermon_audio', $wpFileInfo['url'], $unique = false );
+
+                    // TODO add support for these values
+                    // add_post_meta( $post_id, 'sermon_video', $meta_value, $unique = false );
+                    // add_post_meta( $post_id, 'sermon_notes', $meta_value, $unique = false );
+                    // add_post_meta( $post_id, 'sermon_description', $meta_value, $unique = false );
+
+                    // TODO add support for featured image
+
+                    // TODO add option to publish sermon from import or make drafts from import
+                    // $updatePost               = get_post( $post_id );
+                    // $updated_post                = array();
+                    // $updated_post['ID']          = $post_id;
+                    // $updated_post['post_status'] = 'published';
+                    // wp_update_post( $updated_post );
 
                     $this->set_message( 'Post created: ' . $audio['title'], 'success');
                 } else {
@@ -607,14 +637,16 @@ class SermonUpload
             $file_date = substr( $filename, 0, 8 );
 
             if ( is_numeric( $file_date ) ) {
-                $file_year  = substr( $file_date, 0, 4 );
-                $file_month = substr( $file_date, 4, 2 );
-                $file_days  = substr( $file_date, 6, 2 );
-                $file_date  = $file_year . '-' . $file_month . '-' . $file_days . ' ' . '06:00:00';
+                $file_year    = substr( $file_date, 0, 4 );
+                $file_month   = substr( $file_date, 4, 2 );
+                $file_days    = substr( $file_date, 6, 2 );
+                $file_date    = $file_year . '-' . $file_month . '-' . $file_days . ' ' . '06:00:00';
                 $publish_date = $file_date;
+                $unix_date    = date( 'U', mktime( $file_month, $file_days, $file_year ) );
             } else {
-                $file_date = time();
+                $file_date    = time();
                 $publish_date = date( 'Y-m-d', time() );
+                $unix_date    = date( 'U', time() );
             }
 
             $file_time = strtotime( $file_date );
@@ -628,12 +660,14 @@ class SermonUpload
         } else {
             $display_date = date( 'F j, Y', time() );
             $publish_date = date( 'Y-m-d', time() );
+            $unix_date    = date( 'U', time() );
             $this->set_message( 'The publish date for ' . $filename . ' could not be determined. It will be published ' . $display_date . ' if you do not change it.' );
         }
 
         return array(
             'display_date' => $display_date,
-            'file_date' => $publish_date,
+            'file_date'    => $publish_date,
+            'unix_date'    => $unix_date,
             );
     }
 
@@ -781,7 +815,7 @@ class SermonUpload
             </form>
             <dl id="dl-details-' . $fileUnique . '" class="dl-horizontal">
                 <dt>Speaker:      </dt><dd>' . $displaySpeaker . '</dd>
-                <dt>Bible Text:   </dt><dd>' . $displayText . '</dd>                
+                <dt>Bible Text:   </dt><dd>' . $displayText . '</dd>
                 <dt>Publish Date: </dt><dd>' . $display_date .'</dd>
                 <dt>Category:     </dt><dd>' . $displayCategory . '</dd>
                 <dt>Album:        </dt><dd>' . $displayAlbum . '</dd>
@@ -825,17 +859,9 @@ class SermonUpload
 
         $fileUnique      = str_replace('.', '_', str_replace(' ', '_', $file));
 
-        // $ordinals     = array(__('first'),__('second'),__('third'));
-        // $seriesSpace  = strpos($displayText, ' ');
-        // $seriesString = substr($displayText, 0, $seriesSpace);
+        preg_match('/(^\w{1,3}\s)?\w+/', $displayText, $matches);
+        $displaySeries = $matches[0];
 
-        // if( is_numeric($seriesString) || in_array($seriesString, $ordinals) ) {
-        //         $seriesSecondSpace  = substr($displayText, strpos($displayText, ' '));
-        //         $seriesSecondString = strpos($seriesSecondSpace, ' ');
-        //         $displaySeries      = substr($displayText, 0, $seriesSecondString);
-        // } else {
-            $displaySeries = '';//substr($displayText, strpos($displayText, ' '));          
-        // }
 
         // Picture controls
         $selectPicture = '<input type="file" id="Picture" name="userfile" accept="image/jpeg, image/gif, image/png, image/jpg" class="input-xlarge input-block-level" disabled>';
@@ -897,7 +923,7 @@ class SermonUpload
                        <div class="control-group">
                         <label class="control-label" for="inputSeries">Series</label>
                         <div class="controls">
-                          <input type="text" id="inputSeries" name="series" class="input-xlarge input-block-level" placeholder="Genesis - Not yet implemented" disabled value="' . $displaySeries . '">
+                          <input type="text" id="inputSeries" name="series" class="input-xlarge input-block-level" disabled value="' . $displaySeries . '">
                         </div>
                       </div>
                       <div class="control-group">
@@ -937,7 +963,7 @@ class SermonUpload
                         </div>
                       </div>
                       <input type="hidden" name="filename" value="' . $file . '">
-                      <input type="submit" class="btn btn-primary pull-right" name="update" value="Update File" /> 
+                      <input type="submit" class="btn btn-primary pull-right" name="update" value="Update File" />
                     </form>
                   </div>
                 </div>
@@ -945,9 +971,8 @@ class SermonUpload
 
               <!--<div class="modal-footer">
                 <button class="btn" data-dismiss="modal" aria-hidden="true">Save</button>
-             
+
               </div>-->
- 
             </div>';
 
         return $modal;
