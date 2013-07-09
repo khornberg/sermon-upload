@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Sermon Upload
  * Plugin URI: https://github.com/khornberg/sermon-upload
- * Description: Uploads sermons for Woodland Presbyterian Church. Based off of MP3 to Post plugin by Paul  * Sheldrake. Creates posts using ID3 information in MP3 files.
+ * Description: Uploads sermons for Woodland Presbyterian Church. Based off of MP3 to Post plugin by Paul Sheldrake. Creates posts using ID3 information in MP3 files.
  * Version: 1.1
  * Author: Kyle Hornberg
  * Author URI: https://github.com/khornberg
@@ -321,7 +321,7 @@ class SermonUpload
     }
 
     /**
-     * Creates a post from an mp3 file.
+     * Creates a sermon from an mp3 file.
      *
      *
      * @param unknown $path
@@ -391,85 +391,44 @@ class SermonUpload
                         'post_type'   => 'wpfc_sermon',
                         'tax_input'   => array (
                                             'wpfc_preacher'      => $audio['artist'],
-                                            'wpfc_sermon_series' => 'Test Series',
-                                            'wpfc_sermon_topics' => 'Test Topics',
-                                            'wpfc_bible_book'    => 'Test bible book',
-                                            'wpfc_service_type'  => 'Test service type',
-                                            // TODO add custom bindings for woodland and then generalize
+                                            'wpfc_sermon_series' => get_bible_book($audio['comment']),
+                                            'wpfc_sermon_topics' => '',
+                                            'wpfc_bible_book'    => get_bible_book($audio['comment']),
+                                            'wpfc_service_type'  => get_service_type($date['meridiem']),
                             )
                     );
 
                     // Insert the post!!
-                    // $post_id = wp_insert_post( $my_post );
-
-                    // // If the category/genre is set then update the post
-                    // if ( !empty( $audio['genre'] ) ) {
-                    //     $category_ID = get_cat_ID( $audio['genre'] );
-                    //     // if a category exists
-                    //     if ($category_ID) {
-                    //         $categories_array = array( $category_ID );
-                    //         wp_set_post_categories( $post_id, $categories_array );
-                    //     }
-                    //     // if it doesn't exist then create a new category
-                    //     else {
-                    //         $new_category_ID = wp_create_category( $audio['genre'] );
-                    //         $categories_array = array( $new_category_ID );
-                    //         wp_set_post_categories( $post_id, $categories_array );
-                    //     }
-                    // }
+                    $post_id = wp_insert_post( $my_post );
 
                     // // move the file to the right month/date directory in wordpress
-                    // $wpFileInfo = wp_upload_bits( basename( $filePath ), null, file_get_contents( $filePath ) );
-                    // // if moved correctly delete the original
-                    // if ( empty( $wpFileInfo['error'] ) ) {
-                    //     unlink( $filePath );
-                    // }
+                    $wpFileInfo = wp_upload_bits( basename( $filePath ), null, file_get_contents( $filePath ) );
+                    // if moved correctly delete the original
+                    if ( empty( $wpFileInfo['error'] ) ) {
+                        unlink( $filePath );
+                    }
 
-                    // // Assumes file is not in the media library
-                    // // TODO in WP 3.6b4 media library shows a file unattached to anything
-                    // // add the mp3 file to the post as an attachment
-                    // $wp_filetype = wp_check_filetype( basename( $wpFileInfo['file'] ), null );
-                    // $attachment = array(
-                    //     'post_mime_type' => $wp_filetype['type'],
-                    //     'post_title'     => preg_replace( '/\.[^.]+$/', '', basename( $wpFileInfo['file'] ) ),
-                    //     'post_content'   => '',
-                    //     'post_status'    => 'inherit'
-                    // );
-                    // $attach_id = wp_insert_attachment( $attachment, $wpFileInfo['file'], $post_id );
+                    // Assumes file is not in the media library
+                    // TODO in WP 3.6b4 media library shows a file unattached to anything
+                    // add the mp3 file to the post as an attachment
+                    $wp_filetype = wp_check_filetype( basename( $wpFileInfo['file'] ), null );
+                    $attachment = array(
+                        'post_mime_type' => $wp_filetype['type'],
+                        'post_title'     => preg_replace( '/\.[^.]+$/', '', basename( $wpFileInfo['file'] ) ),
+                        'post_content'   => '',
+                        'post_status'    => 'inherit'
+                    );
+                    $attach_id = wp_insert_attachment( $attachment, $wpFileInfo['file'], $post_id );
 
-                    // // you must first include the image.php file
-                    // // for the function wp_generate_attachment_metadata() to work
-                    // require_once ABSPATH . 'wp-admin/includes/image.php';
-                    // $attach_data = wp_generate_attachment_metadata( $attach_id, $wpFileInfo['file'] );
-                    // wp_update_attachment_metadata( $attach_id, $attach_data );
+                    // you must first include the image.php file
+                    // for the function wp_generate_attachment_metadata() to work
+                    require_once ABSPATH . 'wp-admin/includes/image.php';
+                    $attach_data = wp_generate_attachment_metadata( $attach_id, $wpFileInfo['file'] );
+                    wp_update_attachment_metadata( $attach_id, $attach_data );
 
-                    // // add the link to the attachment to the post
-                    // $attachmentLink = wp_get_attachment_link( $attach_id, 'thumbnail', FALSE, FALSE, 'Download file' );
-
-                    // // content of the post
-                    // $content = '[audio src="' . get_site_url() . $wpFileInfo['file'] . '" preload="true"] <br /><br />';
-                    // if ( !empty($audio['comment']) ) {
-                    //     $content .= '<p><b>Text:</b> ' . $audio['comment'] . '<br />';
-                    // }
-
-                    // if ( !empty($audio['artist']) ) {
-                    //     $content .= '<b>Speaker:</b> ' . $audio['artist'] . '<br />';
-                    // }
-
-                    // // $content .= '<p>Date: ' . $date['display_date'] . '</p><br />' .
-                    // $content .= '</p> [download label="Download"]' . $wpFileInfo['url'] . '[/download]';
-
-                    // $updatePost                   = get_post( $post_id );
-                    // $updated_post                 = array();
-                    // $updated_post['ID']           = $post_id;
-                    // $updated_post['post_content'] = $updatePost->post_content . $content;
-                    // wp_update_post( $updated_post );
-
-                    var_dump( $wpFileInfo);
-
-                    // add_post_meta( $post_id, 'sermon_date', $date['unix_date'], $unique = false );
-                    // add_post_meta( $post_id, 'bible_passage', $audio['comment'], $unique = false );
-                    // add_post_meta( $post_id, 'sermon_audio', $wpFileInfo['url'], $unique = false );
+                    add_post_meta( $post_id, 'sermon_date', $date['unix_date'], $unique = false );
+                    add_post_meta( $post_id, 'bible_passage', $audio['comment'], $unique = false );
+                    add_post_meta( $post_id, 'sermon_audio', $wpFileInfo['url'], $unique = false );
 
                     // TODO add support for these values
                     // add_post_meta( $post_id, 'sermon_video', $meta_value, $unique = false );
@@ -626,7 +585,7 @@ class SermonUpload
      * String, file name
      *
      * @return array
-     * Keyed array with display_date, file_date
+     * Keyed array with display_date, file_date, unix_date, meridiem
      */
     public function dates( $filename )
     {
@@ -636,6 +595,8 @@ class SermonUpload
         if ($file_length >= 8 && is_numeric($file_length)) {
             $file_date = substr( $filename, 0, 8 );
 
+            // Set publish_date for word press post
+            // Set unix_date for other plugins and as a common date
             if ( is_numeric( $file_date ) ) {
                 $file_year    = substr( $file_date, 0, 4 );
                 $file_month   = substr( $file_date, 4, 2 );
@@ -643,24 +604,42 @@ class SermonUpload
                 $file_date    = $file_year . '-' . $file_month . '-' . $file_days . ' ' . '06:00:00';
                 $publish_date = $file_date;
                 $unix_date    = date( 'U', mktime( $file_month, $file_days, $file_year ) );
+                // Set meridiem
+                $file_meridiem = substr( $file_length, 9 );
+                if ( preg_match("/(a|A)$|(am|AM)$|morning/", $file_meridiem) )
+                    $meridiem = 'am';
+                elseif ( preg_match("/(p|P)$|(pm|PM)$|evening/", $file_meridiem) )
+                    $meridiem = 'pm';
+                else
+                    $meridiem = '';
             } else {
-                $file_date    = time();
+                // No date could be determined from the file name
+                // Set publish_date, unix_date, and meridiem to the current time
                 $publish_date = date( 'Y-m-d', time() );
                 $unix_date    = date( 'U', time() );
+                $meridiem     = date( 'a', time() );
+                // Set file_date to the current time to determine the display_date below
+                $file_date    = time();
             }
 
+            // Set display_date for admin page and modal
             $file_time = strtotime( $file_date );
 
             if($file_time) {
                 $display_date = date( 'F j, Y', $file_time );
             } else {
+                // No date could be determined from the file name
+                // Set display_date to the current time
                 $display_date = date( 'F j, Y', time()) ;
                 $this->set_message( 'The publish date for ' . $filename . ' could not be determined. It will be published ' . $display_date . ' if you do not change it.' );
             }
         } else {
+            // No date could be determined from the file name
+            // Sets all dates to the current time
             $display_date = date( 'F j, Y', time() );
             $publish_date = date( 'Y-m-d', time() );
             $unix_date    = date( 'U', time() );
+            $meridiem     = date( 'a', time() );
             $this->set_message( 'The publish date for ' . $filename . ' could not be determined. It will be published ' . $display_date . ' if you do not change it.' );
         }
 
@@ -668,6 +647,7 @@ class SermonUpload
             'display_date' => $display_date,
             'file_date'    => $publish_date,
             'unix_date'    => $unix_date,
+            'meridiem'     => $meridiem,
             );
     }
 
@@ -856,12 +836,8 @@ class SermonUpload
         $displayYear     = empty($id3Details['year']) ? '' : $id3Details['year'];
         $displayLength   = empty($id3Details['length']) ? '' : $id3Details['length'];
         $displayBitrate  = empty($id3Details['bitrate']) ? '' : $id3Details['bitrate'];
-
+        $displaySeries   = get_bible_book($displayText);
         $fileUnique      = str_replace('.', '_', str_replace(' ', '_', $file));
-
-        preg_match('/(^\w{1,3}\s)?\w+/', $displayText, $matches);
-        $displaySeries = $matches[0];
-
 
         // Picture controls
         $selectPicture = '<input type="file" id="Picture" name="userfile" accept="image/jpeg, image/gif, image/png, image/jpg" class="input-xlarge input-block-level" disabled>';
@@ -979,6 +955,41 @@ class SermonUpload
     }
 
     /**
+     * Returns the bible book from a well formated bible reference
+     *
+     * @param string $text
+     * Well formated bible reference (e.g. John 1, John 1:11, 1 John 5:1-3, 3 Jh 5 )
+     *
+     * @return string
+     * @author khornberg
+     **/
+    function get_bible_book( $text )
+    {
+        preg_match('/(^\w{1,3}\s)?\w+/', $text, $matches);
+        return $matches[0];
+    }
+
+
+
+  /**
+     * Returns the service type based on meridiem
+     *
+     * @internal One time use only. Fits only a specific situation.
+     *
+     * @param string text
+     *
+     * @return string
+     * @author khornberg
+     **/
+    function get_service_type( $meridiem )
+    {
+        if ( $meridiem === 'pm' )
+            return 'Sunday Evening';
+        else
+            return 'Sunday Morning';
+    }
+
+    /**
      * NOTE:  Actions are points in the execution of a page or process
      *        lifecycle that WordPress fires.
      *
@@ -996,9 +1007,9 @@ class SermonUpload
         }
     }
 
-    /*
-          Adds help menus items for Sermon upload
-    */
+    /**
+    * Adds help menus items for Sermon upload
+    **/
     public function action_add_help_menu()
     {
         // $uploadsDetails = wp_upload_dir();
@@ -1078,9 +1089,9 @@ class SermonUpload
         return $translated_text;
     }
 
-    /*
-      Changes the location of uploads
-    */
+    /**
+    * Changes the location of uploads
+    **/
 
     public function filter_sermon_upload_pre_upload( $file )
     {
