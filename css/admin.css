@@ -25,3 +25,8 @@ cursor:pointer;
 display:none;
 padding:4px
 }
+
+.alert {
+	width: 80%;
+	margin-top: 10px;
+}

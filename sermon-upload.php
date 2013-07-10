@@ -382,44 +382,94 @@ class SermonUpload
 
                 // If there are no posts with the title of the mp3 then make the post
                 if ($titleSearchResult->post_count == 0) {
+
+                    /**
+                     * @internal One time use. Used to make all sermons have the same preecher
+                     */
+                    if($audio['artist'] === "Joseph H. Steele III")
+                        $preacher = 'Rev. Joseph Steele';
+                    else
+                        $preacher = $audio['artist'];
+
+
                     // create basic post with info from ID3 details
                     $my_post = array(
                         'post_title'  => $audio['title'],
                         'post_name'   => $audio['title'],
                         'post_date'   => $date['file_date'],
-                        'post_status' => 'draft',
+                        'post_status' => 'publish',
                         'post_type'   => 'wpfc_sermon',
                         'tax_input'   => array (
-                                            'wpfc_preacher'      => $audio['artist'],
-                                            'wpfc_sermon_series' => get_bible_book($audio['comment']),
+                                            'wpfc_preacher'      => $preacher,
+                                            'wpfc_sermon_series' => $this->get_bible_book($audio['comment']),
                                             'wpfc_sermon_topics' => '',
-                                            'wpfc_bible_book'    => get_bible_book($audio['comment']),
-                                            'wpfc_service_type'  => get_service_type($date['meridiem']),
+                                            'wpfc_bible_book'    => $this->get_bible_book($audio['comment']),
+                                            'wpfc_service_type'  => $this->get_service_type($date['meridiem']),
                             )
                     );
 
                     // Insert the post!!
                     $post_id = wp_insert_post( $my_post );
 
-                    // // move the file to the right month/date directory in wordpress
+                    // move the file to the right month/date directory in wordpress
                     $wpFileInfo = wp_upload_bits( basename( $filePath ), null, file_get_contents( $filePath ) );
+
+                    /**
+                    * Delete unattached entry in the media library
+                    * Searches for a post in the wp_posts table that is an attachment type with an inherited status and matches the search terms
+                    * Trys to find by ID3 Title as WP 3.6 gets it from the file
+                    * If more than one or none is found try searching using the file name instead.
+                    *
+                    * Important that this occur after the file is moved else the file is also deleted.
+                    */
+
+                    $args = array(
+                        'post_type' => 'attachment',
+                        'post_status' => 'inherit',
+                        's' => $audio['title'],
+                        );
+                    $query = new WP_Query( $args );
+
+                    if ( $query->found_posts == 1 ) {
+                        wp_delete_attachment( $query->post->ID, $force_delete = false );
+                    }
+                    else {
+                        $filename = pathinfo($mp3Files[$i],PATHINFO_FILENAME);
+
+                        $args = array(
+                        'post_type' => 'attachment',
+                        'post_status' => 'inherit',
+                        's' => $filename,
+                        );
+                        $query = new WP_Query( $args );
+
+                        if ( $query->found_posts == 1 ) {
+                            wp_delete_attachment( $query->post->ID, $force_delete = false );
+                        }
+                        else {
+                           $this->set_message( 'No previous attachment deleted. You may have an unattached media entry in the media library. Or you may have uploaded files to the server via another method.', 'warning' );
+                        }
+                    }
+
+                    // add the mp3 file to the post as an attachment
+                    $wp_filetype = wp_check_filetype( basename( $wpFileInfo['file'] ), null );
+                    $attachment = array(
+                        'post_mime_type' => $wp_filetype['type'],
+                        'post_title'     => $audio['title'],
+                        'post_content'   => $audio['title'].' by '.$audio['artist'].' from '.$audio['album'].'. Released: '.$audio['year'].' Comment: '.$audio['comment'].'. Genre: '.$audio['genre'],
+                        'post_status'    => 'inherit',
+                        'guid'           => $wpFileInfo['file'],
+                        'post_parent'    => $post_id,
+                    );
+                    $attach_id = wp_insert_attachment( $attachment, $wpFileInfo['file'], $post_id );
+                    wp_update_attachment_metadata( $post_id, $attachment );
+
                     // if moved correctly delete the original
                     if ( empty( $wpFileInfo['error'] ) ) {
                         unlink( $filePath );
                     }
 
-                    // Assumes file is not in the media library
-                    // TODO in WP 3.6b4 media library shows a file unattached to anything
-                    // add the mp3 file to the post as an attachment
-                    $wp_filetype = wp_check_filetype( basename( $wpFileInfo['file'] ), null );
-                    $attachment = array(
-                        'post_mime_type' => $wp_filetype['type'],
-                        'post_title'     => preg_replace( '/\.[^.]+$/', '', basename( $wpFileInfo['file'] ) ),
-                        'post_content'   => '',
-                        'post_status'    => 'inherit'
-                    );
-                    $attach_id = wp_insert_attachment( $attachment, $wpFileInfo['file'], $post_id );
-
+                    // This is for embeded images
                     // you must first include the image.php file
                     // for the function wp_generate_attachment_metadata() to work
                     require_once ABSPATH . 'wp-admin/includes/image.php';
@@ -590,7 +640,7 @@ class SermonUpload
     public function dates( $filename )
     {
         //Get the date from the file name minus the extention
-        $file_length = strlen( substr( $filename, 0, strpos( $filename, "." ) ) );
+        $file_length = strlen( pathinfo($filename, PATHINFO_FILENAME) );
 
         if ($file_length >= 8 && is_numeric($file_length)) {
             $file_date = substr( $filename, 0, 8 );
@@ -603,9 +653,9 @@ class SermonUpload
                 $file_days    = substr( $file_date, 6, 2 );
                 $file_date    = $file_year . '-' . $file_month . '-' . $file_days . ' ' . '06:00:00';
                 $publish_date = $file_date;
-                $unix_date    = date( 'U', mktime( $file_month, $file_days, $file_year ) );
+                $unix_date    = strtotime($publish_date);
                 // Set meridiem
-                $file_meridiem = substr( $file_length, 9 );
+                $file_meridiem = pathinfo($filename, PATHINFO_FILENAME);
                 if ( preg_match("/(a|A)$|(am|AM)$|morning/", $file_meridiem) )
                     $meridiem = 'am';
                 elseif ( preg_match("/(p|P)$|(pm|PM)$|evening/", $file_meridiem) )
@@ -735,6 +785,27 @@ class SermonUpload
         self::display_notices();
 
         require_once 'views/admin.php';
+
+        // $attachment = array(
+        //                 'post_mime_type' => "audio/mpeg",
+        //                 'post_title'     => "The First Link in a Litany of Blessings2",
+        //                 'post_content'   =>  "The First Link in a Litany of Blessings from Woodland Presbyterian Church by Joseph H. Steele III. Released: 2012. Genre: Sermon.",
+        //                 'post_status'    => 'inherit',
+        //                 'guid'           => 'http://www.woodlandpca.dev/wp-content/uploads/2013/07/20120226a.mp3',
+        //             );
+        // $result = wp_insert_attachment( $attachment, 'http://www.woodlandpca.dev/wp-content/uploads/2013/07/20120226a.mp3', 65 );
+        // var_dump($result);
+
+        // Deletes id 66 after adding a new entry
+
+        // $args = array(
+        //     'post_type' => 'attachment',
+        //     'post_status' => 'inherit',
+        //     's' => 'God’s Faithfulness and the Failure of the Final Solution',
+        //     );
+        // $query = new WP_Query( $args );
+        // wp_delete_attachment( $query->post->ID, $force_delete = false );
+
     }
 
     /**
@@ -804,7 +875,7 @@ class SermonUpload
                 <dt>Bitrate:      </dt><dd>' . $displayBitrate . '</dd>
                 <dt>File name:    </dt><dd>' . $file . '</dd>
                 <dt>Picture:      </dt><dd>' . $displayImage . '</dd>
-        </dl>
+            </dl>
         </li>';
 
         return $info;
@@ -836,7 +907,7 @@ class SermonUpload
         $displayYear     = empty($id3Details['year']) ? '' : $id3Details['year'];
         $displayLength   = empty($id3Details['length']) ? '' : $id3Details['length'];
         $displayBitrate  = empty($id3Details['bitrate']) ? '' : $id3Details['bitrate'];
-        $displaySeries   = get_bible_book($displayText);
+        $displaySeries   = $this->get_bible_book($displayText);
         $fileUnique      = str_replace('.', '_', str_replace(' ', '_', $file));
 
         // Picture controls
@@ -963,7 +1034,7 @@ class SermonUpload
      * @return string
      * @author khornberg
      **/
-    function get_bible_book( $text )
+    public function get_bible_book( $text )
     {
         preg_match('/(^\w{1,3}\s)?\w+/', $text, $matches);
         return $matches[0];
@@ -981,7 +1052,7 @@ class SermonUpload
      * @return string
      * @author khornberg
      **/
-    function get_service_type( $meridiem )
+    public function get_service_type( $meridiem )
     {
         if ( $meridiem === 'pm' )
             return 'Sunday Evening';
