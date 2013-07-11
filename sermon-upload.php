@@ -336,6 +336,7 @@ class SermonUpload
         // check of there are files to process
         if ( count( $mp3Files ) == 0 ) {
             $this->set_message( 'There are no usable files in ' . $this->folderPath . '.' );
+
             return;
         }
 
@@ -351,9 +352,11 @@ class SermonUpload
 
             if ($sermon_to_post === false) {
                 $this->set_message( 'Sermon could not be found in the folder of your uploads. Please check and ensure it is there.', 'error' );
+
                 return;
             } elseif ( !is_numeric( $sermon_to_post ) ) {
                 $this->set_message( 'Key in mp3 files array is not numeric for ' . $mp3Files[$sermon_to_post] . '."', 'error' );
+
                 return;
             }
             $limit = $sermon_to_post + 1;
@@ -390,7 +393,6 @@ class SermonUpload
                         $preacher = 'Rev. Joseph Steele';
                     else
                         $preacher = $audio['artist'];
-
 
                     // create basic post with info from ID3 details
                     $my_post = array(
@@ -430,10 +432,9 @@ class SermonUpload
                         );
                     $query = new WP_Query( $args );
 
-                    if ( $query->found_posts == 1 ) {
+                    if ($query->found_posts == 1) {
                         wp_delete_attachment( $query->post->ID, $force_delete = false );
-                    }
-                    else {
+                    } else {
                         $filename = pathinfo($mp3Files[$i],PATHINFO_FILENAME);
 
                         $args = array(
@@ -443,10 +444,9 @@ class SermonUpload
                         );
                         $query = new WP_Query( $args );
 
-                        if ( $query->found_posts == 1 ) {
+                        if ($query->found_posts == 1) {
                             wp_delete_attachment( $query->post->ID, $force_delete = false );
-                        }
-                        else {
+                        } else {
                            $this->set_message( 'No previous attachment deleted. You may have an unattached media entry in the media library. Or you may have uploaded files to the server via another method.', 'warning' );
                         }
                     }
@@ -675,7 +675,7 @@ class SermonUpload
             // Set display_date for admin page and modal
             $file_time = strtotime( $file_date );
 
-            if($file_time) {
+            if ($file_time) {
                 $display_date = date( 'F j, Y', $file_time );
             } else {
                 // No date could be determined from the file name
@@ -1037,10 +1037,9 @@ class SermonUpload
     public function get_bible_book( $text )
     {
         preg_match('/(^\w{1,3}\s)?\w+/', $text, $matches);
+
         return $matches[0];
     }
-
-
 
   /**
      * Returns the service type based on meridiem
